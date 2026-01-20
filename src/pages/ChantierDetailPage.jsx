@@ -175,12 +175,12 @@ export default function ChantierDetailPage() {
         )}
       </Card>
 
-      {/* Photos */}
-      {chantier.photos && chantier.photos.length > 0 && (
+      {/* Photos AVANT */}
+      {chantier.photos && chantier.photos.filter(p => p.photo_type === 'before').length > 0 && (
         <Card className="p-5">
-          <h2 className="text-lg font-semibold text-white mb-4">Photos</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">📷 Photos AVANT</h2>
           <div className="grid grid-cols-3 gap-2">
-            {chantier.photos.map((photo) => (
+            {chantier.photos.filter(p => p.photo_type === 'before').map((photo) => (
               <a
                 key={photo.id}
                 href={photo.url}
@@ -190,9 +190,56 @@ export default function ChantierDetailPage() {
               >
                 <img
                   src={photo.url}
-                  alt="Photo chantier"
+                  alt="Photo avant"
                   className="w-full h-full object-cover hover:opacity-80 transition-opacity"
                 />
+              </a>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Photos APRÈS */}
+      {chantier.photos && chantier.photos.filter(p => p.photo_type === 'after' || !p.photo_type).length > 0 && (
+        <Card className="p-5">
+          <h2 className="text-lg font-semibold text-white mb-4">📷 Photos APRÈS</h2>
+          <div className="grid grid-cols-3 gap-2">
+            {chantier.photos.filter(p => p.photo_type === 'after' || !p.photo_type).map((photo) => (
+              <a
+                key={photo.id}
+                href={photo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="aspect-square rounded-lg overflow-hidden bg-zinc-800"
+              >
+                <img
+                  src={photo.url}
+                  alt="Photo après"
+                  className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                />
+              </a>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Documents */}
+      {chantier.documents && chantier.documents.length > 0 && (
+        <Card className="p-5">
+          <h2 className="text-lg font-semibold text-white mb-4">📄 Documents</h2>
+          <div className="space-y-2">
+            {chantier.documents.map((doc) => (
+              <a
+                key={doc.id}
+                href={doc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors"
+              >
+                <Download className="w-5 h-5 text-orange-400 flex-shrink-0" />
+                <span className="text-sm text-zinc-300 flex-1 truncate">
+                  {doc.filename || 'Document'}
+                </span>
               </a>
             ))}
           </div>

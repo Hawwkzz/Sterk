@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { MapPin, Zap, User, Mail, Phone, Camera, X, Send, Save } from 'lucide-react'
+import { MapPin, Zap, User, Mail, Phone, Camera, X, Send, Save, FileText, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { generateSecureToken, isValidEmail, isValidPhone } from '../lib/utils'
@@ -9,10 +9,14 @@ import toast from 'react-hot-toast'
 
 export default function NewChantierModal({ open, onClose, onSuccess }) {
   const { equipe } = useAuth()
-  const fileInputRef = useRef(null)
+  const fileInputBeforeRef = useRef(null)
+  const fileInputAfterRef = useRef(null)
+  const docInputRef = useRef(null)
   
   const [loading, setLoading] = useState(false)
-  const [photos, setPhotos] = useState([])
+  const [photosBefore, setPhotosBefore] = useState([])
+  const [photosAfter, setPhotosAfter] = useState([])
+  const [documents, setDocuments] = useState([])
   const [formData, setFormData] = useState({
     adresse: '',
     led_count: '',
@@ -26,16 +30,18 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
   function handleChange(e) {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
-    // Clear error on change
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }))
     }
   }
 
-  function handlePhotoSelect(e) {
+  function handlePhotoSelect(e, type) {
     const files = Array.from(e.target.files)
-    if (files.length + photos.length > 6) {
-      toast.error('Maximum 6 photos autorisées')
+    const currentPhotos = type === 'before' ? photosBefore : photosAfter
+    const setPhotos = type === 'before' ? setPhotosBefore : setPhotosAfter
+    
+    if (files.length + currentPhotos.length > 6) {
+      toast.error('Maximum 6 photos par catégorie')
       return
     }
 
@@ -57,8 +63,39 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
     })
   }
 
-  function removePhoto(id) {
-    setPhotos(prev => prev.filter(p => p.id !== id))
+  function handleDocSelect(e) {
+    const files = Array.from(e.target.files)
+    
+    if (files.length + documents.length > 5) {
+      toast.error('Maximum 5 documents')
+      return
+    }
+
+    files.forEach(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} dépasse 10MB`)
+        return
+      }
+
+      setDocuments(prev => [...prev, {
+        file,
+        name: file.name,
+        type: file.type,
+        id: Math.random().toString(36).substring(7)
+      }])
+    })
+  }
+
+  function removePhoto(id, type) {
+    if (type === 'before') {
+      setPhotosBefore(prev => prev.filter(p => p.id !== id))
+    } else {
+      setPhotosAfter(prev => prev.filter(p => p.id !== id))
+    }
+  }
+
+  function removeDocument(id) {
+    setDocuments(prev => prev.filter(d => d.id !== id))
   }
 
   function validate() {
@@ -88,8 +125,8 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
       }
     }
     
-    if (photos.length < 1) {
-      toast.error('Au moins 1 photo requise')
+    if (photosAfter.length < 1) {
+      toast.error('Au moins 1 photo "après" requise')
       return false
     }
 
@@ -98,11 +135,15 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
   }
 
   async function uploadPhotos(chantierId) {
-    const uploadedUrls = []
+    const allPhotos = [
+      ...photosBefore.map(p => ({ ...p, type: 'before' })),
+      ...photosAfter.map(p => ({ ...p, type: 'after' }))
+    ]
+    const uploadedPhotos = []
     
-    for (const photo of photos) {
+    for (const photo of allPhotos) {
       const fileExt = photo.file.name.split('.').pop()
-      const fileName = `${chantierId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const fileName = `${chantierId}/${photo.type}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
       
       const { error: uploadError } = await supabase.storage
         .from('chantier-photos')
@@ -117,10 +158,40 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
         .from('chantier-photos')
         .getPublicUrl(fileName)
 
-      uploadedUrls.push(publicUrl)
+      uploadedPhotos.push({ url: publicUrl, type: photo.type })
     }
 
-    return uploadedUrls
+    return uploadedPhotos
+  }
+
+  async function uploadDocuments(chantierId) {
+    const uploadedDocs = []
+    
+    for (const doc of documents) {
+      const fileExt = doc.file.name.split('.').pop()
+      const fileName = `${chantierId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('chantier-documents')
+        .upload(fileName, doc.file)
+
+      if (uploadError) {
+        console.error('Upload doc error:', uploadError)
+        continue
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('chantier-documents')
+        .getPublicUrl(fileName)
+
+      uploadedDocs.push({ 
+        url: publicUrl, 
+        filename: doc.name,
+        file_type: doc.type 
+      })
+    }
+
+    return uploadedDocs
   }
 
   async function handleSubmit(isDraft = false) {
@@ -135,7 +206,7 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
     try {
       const token = generateSecureToken()
       const expiresAt = new Date()
-      expiresAt.setHours(expiresAt.getHours() + 72) // 72h expiration
+      expiresAt.setHours(expiresAt.getHours() + 72)
 
       // Créer le chantier
       const { data: chantier, error: chantierError } = await supabase
@@ -159,28 +230,40 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
       if (chantierError) throw chantierError
 
       // Upload des photos
-      if (photos.length > 0) {
-        const photoUrls = await uploadPhotos(chantier.id)
+      if (photosBefore.length > 0 || photosAfter.length > 0) {
+        const uploadedPhotos = await uploadPhotos(chantier.id)
         
-        // Sauvegarder les URLs en BDD
-        const photoRecords = photoUrls.map(url => ({
+        const photoRecords = uploadedPhotos.map(p => ({
           chantier_id: chantier.id,
-          url,
+          url: p.url,
+          photo_type: p.type,
         }))
 
         await supabase.from('chantier_photos').insert(photoRecords)
       }
 
+      // Upload des documents
+      if (documents.length > 0) {
+        const uploadedDocs = await uploadDocuments(chantier.id)
+        
+        const docRecords = uploadedDocs.map(d => ({
+          chantier_id: chantier.id,
+          url: d.url,
+          filename: d.filename,
+          file_type: d.file_type,
+        }))
+
+        await supabase.from('chantier_documents').insert(docRecords)
+      }
+
       // Si pas brouillon, envoyer la notification au client
       if (!isDraft) {
-        // Appeler l'edge function pour envoyer email/SMS
         const { error: notifyError } = await supabase.functions.invoke('notify-client', {
           body: { chantierId: chantier.id }
         })
 
         if (notifyError) {
           console.error('Notify error:', notifyError)
-          // On continue quand même, le chantier est créé
         }
       }
 
@@ -196,7 +279,9 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
         client_phone: '',
         commentaire: '',
       })
-      setPhotos([])
+      setPhotosBefore([])
+      setPhotosAfter([])
+      setDocuments([])
     } catch (error) {
       console.error('Error creating chantier:', error)
       toast.error('Erreur lors de la création du chantier')
@@ -205,9 +290,44 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
     }
   }
 
+  // Composant PhotoGrid réutilisable
+  function PhotoGrid({ photos, type, inputRef, onRemove }) {
+    return (
+      <div className="grid grid-cols-3 gap-3">
+        {photos.map((photo) => (
+          <div key={photo.id} className="relative aspect-square">
+            <img
+              src={photo.preview}
+              alt="Preview"
+              className="w-full h-full object-cover rounded-xl"
+            />
+            <button
+              type="button"
+              onClick={() => onRemove(photo.id, type)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+        
+        {photos.length < 6 && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="aspect-square bg-zinc-800 border-2 border-dashed border-zinc-600 rounded-xl flex flex-col items-center justify-center hover:border-orange-500 hover:bg-zinc-800/80 transition-colors"
+          >
+            <Camera className="w-6 h-6 text-zinc-500 mb-1" />
+            <span className="text-zinc-500 text-xs">Ajouter</span>
+          </button>
+        )}
+      </div>
+    )
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="Nouveau chantier" size="lg">
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
         {/* Adresse */}
         <Input
           name="adresse"
@@ -279,55 +399,94 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
           onChange={handleChange}
         />
 
-        {/* Photos */}
+        {/* Photos AVANT */}
         <div>
           <label className="text-zinc-400 text-sm font-medium block mb-2">
-            Photos du chantier *
+            📷 Photos AVANT chantier (optionnel)
+          </label>
+          <PhotoGrid 
+            photos={photosBefore} 
+            type="before" 
+            inputRef={fileInputBeforeRef}
+            onRemove={removePhoto}
+          />
+          <input
+            ref={fileInputBeforeRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => handlePhotoSelect(e, 'before')}
+          />
+        </div>
+
+        {/* Photos APRÈS */}
+        <div>
+          <label className="text-zinc-400 text-sm font-medium block mb-2">
+            📷 Photos APRÈS chantier *
+          </label>
+          <PhotoGrid 
+            photos={photosAfter} 
+            type="after" 
+            inputRef={fileInputAfterRef}
+            onRemove={removePhoto}
+          />
+          <input
+            ref={fileInputAfterRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => handlePhotoSelect(e, 'after')}
+          />
+          <p className="text-zinc-500 text-xs mt-2">
+            Minimum 1 photo après, maximum 6 par catégorie. 5MB max par photo.
+          </p>
+        </div>
+
+        {/* Documents */}
+        <div>
+          <label className="text-zinc-400 text-sm font-medium block mb-2">
+            📄 Documents (optionnel)
           </label>
           
-          <div className="grid grid-cols-3 gap-3">
-            {/* Photos existantes */}
-            {photos.map((photo) => (
-              <div key={photo.id} className="relative aspect-square">
-                <img
-                  src={photo.preview}
-                  alt="Preview"
-                  className="w-full h-full object-cover rounded-xl"
-                />
+          <div className="space-y-2">
+            {documents.map((doc) => (
+              <div key={doc.id} className="flex items-center gap-3 bg-zinc-800 rounded-lg p-3">
+                <FileText className="w-5 h-5 text-orange-400 flex-shrink-0" />
+                <span className="text-sm text-zinc-300 flex-1 truncate">{doc.name}</span>
                 <button
                   type="button"
-                  onClick={() => removePhoto(photo.id)}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
+                  onClick={() => removeDocument(doc.id)}
+                  className="text-red-400 hover:text-red-300"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             ))}
             
-            {/* Bouton ajouter */}
-            {photos.length < 6 && (
+            {documents.length < 5 && (
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="aspect-square bg-zinc-800 border-2 border-dashed border-zinc-600 rounded-xl flex flex-col items-center justify-center hover:border-orange-500 hover:bg-zinc-800/80 transition-colors"
+                onClick={() => docInputRef.current?.click()}
+                className="w-full bg-zinc-800 border-2 border-dashed border-zinc-600 rounded-lg p-4 flex items-center justify-center gap-2 hover:border-orange-500 hover:bg-zinc-800/80 transition-colors"
               >
-                <Camera className="w-6 h-6 text-zinc-500 mb-1" />
-                <span className="text-zinc-500 text-xs">Ajouter</span>
+                <Upload className="w-5 h-5 text-zinc-500" />
+                <span className="text-zinc-500 text-sm">Ajouter un document</span>
               </button>
             )}
           </div>
           
           <input
-            ref={fileInputRef}
+            ref={docInputRef}
             type="file"
-            accept="image/*"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
             multiple
             className="hidden"
-            onChange={handlePhotoSelect}
+            onChange={handleDocSelect}
           />
-          
           <p className="text-zinc-500 text-xs mt-2">
-            Minimum 1 photo, maximum 6. 5MB max par photo.
+            PDF, Word, Excel, images. Max 5 fichiers, 10MB chacun.
           </p>
         </div>
 

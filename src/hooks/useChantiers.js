@@ -82,7 +82,8 @@ export function useChantier(chantierId) {
           .select(`
             *,
             equipe:equipes(id, name, responsable),
-            photos:chantier_photos(id, url, created_at),
+            photos:chantier_photos(id, url, photo_type, created_at),
+            documents:chantier_documents(id, url, filename, file_type, created_at),
             refus:chantier_refus(id, commentaire, created_at, photos:refus_photos(id, url))
           `)
           .eq('id', chantierId)
