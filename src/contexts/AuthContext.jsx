@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
       setProfile(profileData)
 
       // Si c'est une équipe, récupérer les infos de l'équipe
-      if (profileData.role === 'equipe' && profileData.equipe_id) {
+      if (profileData.equipe_id) {
         const { data: equipeData, error: equipeError } = await supabase
           .from('equipes')
           .select('*')
