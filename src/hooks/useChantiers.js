@@ -174,7 +174,7 @@ export function useChantierStats() {
           .reduce((sum, c) => sum + (c.led_count || 0), 0)
 
         // Calcul des primes
-        const QUOTA = 1600
+        const QUOTA = 1200
         const PRIME_PAR_LED = 5
         
         const primeMensuelle = Math.max(0, ledValidees - QUOTA) * PRIME_PAR_LED
@@ -231,7 +231,7 @@ export function useClassement() {
         // Calculer le total LED par équipe
         const equipesWithLed = data.map(eq => {
           const totalLed = eq.chantiers.reduce((sum, c) => sum + (c.led_count || 0), 0)
-          const QUOTA = 1600
+          const QUOTA = 1200
           const PRIME_PAR_LED = 5
           const prime = Math.max(0, totalLed - QUOTA) * PRIME_PAR_LED
           
