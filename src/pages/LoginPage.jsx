@@ -74,7 +74,7 @@ export default function LoginPage() {
             <Zap className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">
-            STERK<span className="text-orange-500">.</span>LED
+            EOIA<span className="text-orange-500">.</span>Energie
           </h1>
           <p className="text-zinc-500 mt-2">Suivi de production LED</p>
         </div>
@@ -142,7 +142,7 @@ export default function LoginPage() {
       {/* Footer */}
       <div className="relative py-6 text-center">
         <p className="text-zinc-600 text-sm">
-          STERK & Construction © 2026
+         EOIA Energie © 2026
         </p>
       </div>
     </div>
