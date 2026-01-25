@@ -43,8 +43,8 @@ export default function Layout() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
                 <Zap className="w-4 h-4 text-white" />
               </div>
-              <span className="font-black text-lg tracking-tight">STERK</span>
-              <span className="text-zinc-500 text-sm">LED</span>
+              <span className="font-black text-lg tracking-tight">EOIA</span>
+              <span className="text-zinc-500 text-sm">Energie</span>
             </div>
             
             <div className="flex items-center gap-3">
