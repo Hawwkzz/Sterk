@@ -7,14 +7,14 @@ export async function generateChantierPDF(chantier, equipe, photos = []) {
   const pageWidth = doc.internal.pageSize.getWidth()
   
   // En-tête avec logo
-  doc.setFillColor(249, 115, 22) // Orange STERK
+  doc.setFillColor(249, 115, 22) // Orange EOIA Energie
   doc.rect(0, 0, pageWidth, 40, 'F')
   
   // Titre
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(24)
   doc.setFont('helvetica', 'bold')
-  doc.text('STERK & Construction', 20, 20)
+  doc.text('EOIA Energie', 20, 20)
   
   doc.setFontSize(14)
   doc.setFont('helvetica', 'normal')
@@ -140,7 +140,7 @@ export async function generateChantierPDF(chantier, equipe, photos = []) {
     doc.setFontSize(8)
     doc.setTextColor(128, 128, 128)
     doc.text(
-      `Document généré automatiquement par STERK LED - Page ${i}/${pageCount}`,
+      `Document généré automatiquement par EOIA Energie - Page ${i}/${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
