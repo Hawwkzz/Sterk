@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
-        name: 'STERK LED - Suivi Production',
-        short_name: 'STERK LED',
+        name: 'EOIA Energie - Suivi Production',
+        short_name: 'EOIA Energie',
         description: 'Application de suivi des installations LED',
         theme_color: '#f97316',
         background_color: '#09090b',
