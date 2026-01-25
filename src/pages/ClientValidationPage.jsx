@@ -231,7 +231,7 @@ export default function ClientValidationPage() {
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Merci !</h1>
           <p className="text-zinc-400 mb-6">
-            Votre réponse a été enregistrée. L'équipe STERK vous remercie pour votre confiance.
+            Votre réponse a été enregistrée. L'équipe EOIA Energie vous remercie pour votre confiance.
           </p>
           
           {chantier && (
@@ -255,7 +255,7 @@ export default function ClientValidationPage() {
         <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
           <Zap className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-white">STERK & Construction</h1>
+        <h1 className="text-2xl font-bold text-white">EOIA Energie</h1>
         <p className="text-orange-100 mt-1">Validation d'intervention LED</p>
       </div>
 
@@ -421,7 +421,7 @@ export default function ClientValidationPage() {
         {/* Footer */}
         <p className="text-center text-zinc-600 text-xs pt-4">
           Ce lien expire dans 72h.<br />
-          En cas de problème, contactez STERK & Construction.
+          En cas de problème, contactez EOIA Energie.
         </p>
       </div>
     </div>
