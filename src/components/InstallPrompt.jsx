@@ -85,7 +85,7 @@ export default function InstallPrompt() {
           
           <div className="flex-1">
             <h3 className="text-white font-semibold mb-1">
-              Installer STERK LED
+              Installer EOIA Energie
             </h3>
             
             {isIOS ? (
