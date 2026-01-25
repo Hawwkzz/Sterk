@@ -1,5 +1,5 @@
 // Règles métier STERK
-export const QUOTA_MENSUEL = 1600
+export const QUOTA_MENSUEL = 1200
 export const PRIME_PAR_LED = 5
 export const LIEN_EXPIRATION_HEURES = 72
 
