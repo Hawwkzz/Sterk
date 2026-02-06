@@ -68,11 +68,43 @@ export function useChantier(chantierId) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
+  async function fetchChantier() {
     if (!chantierId) {
       setLoading(false)
       return
     }
+
+    try {
+      setLoading(true)
+      const { data, error: fetchError } = await supabase
+        .from('chantiers')
+        .select(`
+          *,
+          equipe:equipes(id, name, responsable),
+          photos:chantier_photos(id, url, photo_type, created_at),
+          documents:chantier_documents(id, url, filename, file_type, created_at),
+          refus:chantier_refus(id, commentaire, created_at, photos:refus_photos(id, url))
+        `)
+        .eq('id', chantierId)
+        .single()
+
+      if (fetchError) throw fetchError
+      setChantier(data)
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching chantier:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchChantier()
+  }, [chantierId])
+
+  return { chantier, loading, error, refetch: fetchChantier }
+}
 
     async function fetchChantier() {
       try {
