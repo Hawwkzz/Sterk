@@ -72,7 +72,7 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
     }
 
     files.forEach(file => {
-      if (file.size > 20 * 1024 * 1024) {
+      if (file.size > 50 * 1024 * 1024) {
         toast.error(`${file.name} dépasse 10MB`)
         return
       }
