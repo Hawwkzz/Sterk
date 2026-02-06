@@ -1,5 +1,6 @@
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Zap, MapPin, User, Mail, Phone, Calendar, CheckCircle, Clock, AlertCircle, Send, Download, Image as ImageIcon, MessageSquare } from 'lucide-react'
+import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Zap, MapPin, User, Mail, Phone, Calendar, CheckCircle, Clock, AlertCircle, Send, Download, Edit, MessageSquare } from 'lucide-react'
 import { useChantier } from '../hooks/useChantiers'
 import { supabase } from '../lib/supabase'
 import { STATUT_CONFIG, STATUTS } from '../lib/constants'
@@ -7,6 +8,7 @@ import { formatDate, formatDateTime, formatNumber } from '../lib/utils'
 import { generateChantierPDF, downloadPDF } from '../lib/pdf'
 import { Card, Button, Spinner, Badge } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
+import EditChantierModal from '../components/EditChantierModal'
 import toast from 'react-hot-toast'
 
 const STATUS_ICONS = {
@@ -20,7 +22,8 @@ export default function ChantierDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { equipe } = useAuth()
-  const { chantier, loading, error } = useChantier(id)
+  const { chantier, loading, error, refetch } = useChantier(id)
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   async function handleResend() {
     try {
@@ -47,6 +50,17 @@ export default function ChantierDetailPage() {
       toast.error('Erreur lors de la génération du PDF')
     }
   }
+
+  function handleEditSuccess() {
+    refetch?.()
+    setEditModalOpen(false)
+  }
+
+  const canEdit = chantier && (
+    chantier.status === STATUTS.DRAFT || 
+    chantier.status === STATUTS.PENDING_CLIENT || 
+    chantier.status === STATUTS.REFUSE
+  )
 
   if (loading) {
     return (
@@ -82,8 +96,16 @@ export default function ChantierDetailPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-white">Détail chantier</h1>
-          <p className="text-zinc-500 text-sm">#{chantier.id}</p>
+          <p className="text-zinc-500 text-sm">#{chantier.id.slice(0, 8)}</p>
         </div>
+        {canEdit && (
+          <button
+            onClick={() => setEditModalOpen(true)}
+            className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center hover:bg-orange-600 transition-colors"
+          >
+            <Edit className="w-5 h-5 text-white" />
+          </button>
+        )}
       </div>
 
       {/* Statut */}
@@ -284,9 +306,13 @@ export default function ChantierDetailPage() {
       {/* Actions */}
       <div className="space-y-3">
         {chantier.status === STATUTS.DRAFT && (
-          <Button className="w-full" size="lg">
-            <Send className="w-5 h-5" />
-            Envoyer au client
+          <Button 
+            className="w-full" 
+            size="lg"
+            onClick={() => setEditModalOpen(true)}
+          >
+            <Edit className="w-5 h-5" />
+            Modifier et envoyer
           </Button>
         )}
 
@@ -298,7 +324,12 @@ export default function ChantierDetailPage() {
         )}
 
         {chantier.status === STATUTS.REFUSE && (
-          <Button className="w-full" size="lg">
+          <Button 
+            className="w-full" 
+            size="lg"
+            onClick={() => setEditModalOpen(true)}
+          >
+            <Edit className="w-5 h-5" />
             Corriger et renvoyer
           </Button>
         )}
@@ -324,6 +355,14 @@ export default function ChantierDetailPage() {
           </p>
         )}
       </div>
+
+      {/* Modal d'édition */}
+      <EditChantierModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSuccess={handleEditSuccess}
+        chantier={chantier}
+      />
     </div>
   )
 }
