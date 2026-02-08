@@ -7,6 +7,15 @@ import { AuthProvider } from './contexts/AuthContext'
 import InstallPrompt from './components/InstallPrompt'
 import './index.css'
 
+// Nettoyer le service worker au chargement
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(registration => {
+      registration.update()
+    })
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
