@@ -1,12 +1,3 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
-import App from './App'
-import { AuthProvider } from './contexts/AuthContext'
-import InstallPrompt from './components/InstallPrompt'
-import './index.css'
-
 // Nettoyer le service worker au chargement
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(registrations => {
@@ -15,6 +6,15 @@ if ('serviceWorker' in navigator) {
     })
   })
 }
+
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
+import App from './App'
+import { AuthProvider } from './contexts/AuthContext'
+import InstallPrompt from './components/InstallPrompt'
+import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
