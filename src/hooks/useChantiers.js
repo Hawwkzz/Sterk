@@ -22,12 +22,10 @@ export function useChantiers(filters = {}) {
         `)
         .order('created_at', { ascending: false })
 
-      // Filtrer par équipe si pas admin
       if (!isAdmin && equipe) {
         query = query.eq('equipe_id', equipe.id)
       }
 
-      // Filtres additionnels
       if (filters.status) {
         query = query.eq('status', filters.status)
       }
@@ -68,7 +66,7 @@ export function useChantier(chantierId) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  async function fetchChantier() {
+  const fetchChantier = useCallback(async () => {
     if (!chantierId) {
       setLoading(false)
       return
@@ -97,45 +95,13 @@ export function useChantier(chantierId) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [chantierId])
 
   useEffect(() => {
     fetchChantier()
-  }, [chantierId])
+  }, [fetchChantier])
 
   return { chantier, loading, error, refetch: fetchChantier }
-}
-
-    async function fetchChantier() {
-      try {
-        setLoading(true)
-        const { data, error: fetchError } = await supabase
-          .from('chantiers')
-          .select(`
-            *,
-            equipe:equipes(id, name, responsable),
-            photos:chantier_photos(id, url, photo_type, created_at),
-            documents:chantier_documents(id, url, filename, file_type, created_at),
-            refus:chantier_refus(id, commentaire, created_at, photos:refus_photos(id, url))
-          `)
-          .eq('id', chantierId)
-          .single()
-
-        if (fetchError) throw fetchError
-        setChantier(data)
-        setError(null)
-      } catch (err) {
-        console.error('Error fetching chantier:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchChantier()
-  }, [chantierId])
-
-  return { chantier, loading, error }
 }
 
 export function useChantierStats() {
@@ -177,8 +143,6 @@ export function useChantierStats() {
 
         if (error) throw error
 
-        // Calculer les stats
-        const now = new Date()
         const monthChantiers = chantiers.filter(c => {
           const date = new Date(c.created_at)
           return date >= monthStart && date <= monthEnd
@@ -205,7 +169,6 @@ export function useChantierStats() {
           .filter(c => c.status === STATUTS.VALIDE)
           .reduce((sum, c) => sum + (c.led_count || 0), 0)
 
-        // Calcul des primes
         const QUOTA = 1200
         const PRIME_PAR_LED = 5
         
@@ -260,7 +223,6 @@ export function useClassement() {
 
         if (error) throw error
 
-        // Calculer le total LED par équipe
         const equipesWithLed = data.map(eq => {
           const totalLed = eq.chantiers.reduce((sum, c) => sum + (c.led_count || 0), 0)
           const QUOTA = 1200
@@ -276,10 +238,8 @@ export function useClassement() {
           }
         })
 
-        // Trier par LED décroissant
         equipesWithLed.sort((a, b) => b.totalLed - a.totalLed)
 
-        // Ajouter le rang
         const ranked = equipesWithLed.map((eq, index) => ({
           ...eq,
           rank: index + 1,
@@ -287,7 +247,6 @@ export function useClassement() {
 
         setClassement(ranked)
         
-        // Trouver mon rang
         const myPosition = ranked.find(eq => eq.isMe)
         setMyRank(myPosition?.rank || null)
       } catch (err) {
