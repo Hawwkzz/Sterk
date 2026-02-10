@@ -18,7 +18,6 @@ export default function ClientValidationPage() {
   const [completed, setCompleted] = useState(false)
   const [showRefusForm, setShowRefusForm] = useState(false)
   
-  // Refus form
   const [refusComment, setRefusComment] = useState('')
   const [refusPhotos, setRefusPhotos] = useState([])
   const fileInputRef = useRef(null)
@@ -31,7 +30,6 @@ export default function ClientValidationPage() {
           return
         }
 
-        // Chercher le chantier par token
         const { data, error: fetchError } = await supabase
           .from('chantiers')
           .select(`
@@ -48,13 +46,11 @@ export default function ClientValidationPage() {
           return
         }
 
-        // Vérifier expiration
         if (new Date(data.validation_expires_at) < new Date()) {
           setError('Ce lien de validation a expiré. Veuillez contacter l\'équipe.')
           return
         }
 
-        // Vérifier si déjà traité
         if (data.status === STATUTS.VALIDE) {
           setCompleted(true)
           setChantier(data)
@@ -143,7 +139,6 @@ export default function ClientValidationPage() {
 
     setSubmitting(true)
     try {
-      // Mettre à jour le statut
       const { error: updateError } = await supabase
         .from('chantiers')
         .update({ status: STATUTS.REFUSE })
@@ -151,7 +146,6 @@ export default function ClientValidationPage() {
 
       if (updateError) throw updateError
 
-      // Créer l'entrée de refus
       const { data: refusData, error: refusError } = await supabase
         .from('chantier_refus')
         .insert({
@@ -163,7 +157,6 @@ export default function ClientValidationPage() {
 
       if (refusError) throw refusError
 
-      // Upload des photos
       for (const photo of refusPhotos) {
         const fileExt = photo.file.name.split('.').pop()
         const fileName = `refus/${chantier.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
@@ -194,7 +187,6 @@ export default function ClientValidationPage() {
     }
   }
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -206,7 +198,6 @@ export default function ClientValidationPage() {
     )
   }
 
-  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
@@ -221,7 +212,6 @@ export default function ClientValidationPage() {
     )
   }
 
-  // Completed state
   if (completed) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
@@ -247,7 +237,6 @@ export default function ClientValidationPage() {
     )
   }
 
-  // Séparer les photos avant et après
   const photosBefore = chantier.photos?.filter(p => p.photo_type === 'before') || []
   const photosAfter = chantier.photos?.filter(p => p.photo_type === 'after' || !p.photo_type) || []
 
@@ -255,7 +244,6 @@ export default function ClientValidationPage() {
     <div className="min-h-screen bg-zinc-950">
       <Toaster position="top-center" />
       
-      {/* Header */}
       <div className="bg-gradient-to-br from-orange-600 to-amber-600 px-6 py-8 text-center">
         <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
           <Zap className="w-8 h-8 text-white" />
@@ -265,7 +253,6 @@ export default function ClientValidationPage() {
       </div>
 
       <div className="px-6 py-8 max-w-md mx-auto space-y-6">
-        {/* Chantier info */}
         <Card className="p-5 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
@@ -306,79 +293,48 @@ export default function ClientValidationPage() {
           </div>
         </Card>
 
-{/* Photos AVANT */}
         {photosBefore.length > 0 && (
           <Card className="p-5">
             <p className="text-white font-medium mb-3">📷 Photos AVANT intervention</p>
             <div className="grid grid-cols-3 gap-2">
               {photosBefore.map(photo => (
-                
-                  key={photo.id}
-                  href={photo.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="aspect-square rounded-lg overflow-hidden bg-zinc-800"
-                >
-                  <img
-                    src={photo.url}
-                    alt="Photo avant"
-                    className="w-full h-full object-cover"
-                  />
+                <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden bg-zinc-800">
+                  <img src={photo.url} alt="Photo avant" className="w-full h-full object-cover" />
                 </a>
               ))}
             </div>
           </Card>
         )}
 
-        {/* Photos APRÈS */}
         {photosAfter.length > 0 && (
           <Card className="p-5">
             <p className="text-white font-medium mb-3">📷 Photos APRÈS intervention</p>
             <div className="grid grid-cols-3 gap-2">
               {photosAfter.map(photo => (
-                
-                  key={photo.id}
-                  href={photo.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="aspect-square rounded-lg overflow-hidden bg-zinc-800"
-                >
-                  <img
-                    src={photo.url}
-                    alt="Photo après"
-                    className="w-full h-full object-cover"
-                  />
-                </a>
-              ))}
-            </div>
-          </Card>
-        )}
-        {/* Documents */}
-        {chantier.documents && chantier.documents.length > 0 && (
-          <Card className="p-5">
-            <p className="text-white font-medium mb-3">📄 Documents joints</p>
-            <div className="space-y-2">
-              {chantier.documents.map(doc => (
-                
-                  key={doc.id}
-                  href={doc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-orange-400" />
-                  </div>
-                  <span className="text-sm text-zinc-300 flex-1 truncate">
-                    {doc.filename || 'Document'}
-                  </span>
+                <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden bg-zinc-800">
+                  <img src={photo.url} alt="Photo après" className="w-full h-full object-cover" />
                 </a>
               ))}
             </div>
           </Card>
         )}
 
-        {/* Refus form */}
+        {chantier.documents && chantier.documents.length > 0 && (
+          <Card className="p-5">
+            <p className="text-white font-medium mb-3">📄 Documents joints</p>
+            <div className="space-y-2">
+              {chantier.documents.map(doc => (
+                <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <span className="text-sm text-zinc-300 flex-1 truncate">{doc.filename || 'Document'}</span>
+                </a>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {showRefusForm ? (
           <Card className="p-5 border-red-500/30 bg-red-500/5">
             <h3 className="text-lg font-semibold text-white mb-4">Motif du refus</h3>
@@ -396,82 +352,40 @@ export default function ClientValidationPage() {
               <div className="grid grid-cols-4 gap-2">
                 {refusPhotos.map(photo => (
                   <div key={photo.id} className="relative aspect-square">
-                    <img
-                      src={photo.preview}
-                      alt="Preview"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => removePhoto(photo.id)}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
-                    >
+                    <img src={photo.preview} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                    <button onClick={() => removePhoto(photo.id)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
                       <X className="w-3 h-3 text-white" />
                     </button>
                   </div>
                 ))}
                 {refusPhotos.length < 4 && (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square bg-zinc-800 border-2 border-dashed border-zinc-600 rounded-lg flex flex-col items-center justify-center hover:border-red-500"
-                  >
+                  <button onClick={() => fileInputRef.current?.click()} className="aspect-square bg-zinc-800 border-2 border-dashed border-zinc-600 rounded-lg flex flex-col items-center justify-center hover:border-red-500">
                     <Camera className="w-5 h-5 text-zinc-500" />
                   </button>
                 )}
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handlePhotoSelect}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
             </div>
 
             <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => setShowRefusForm(false)}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="danger"
-                className="flex-1"
-                loading={submitting}
-                onClick={handleRefuse}
-              >
-                Confirmer le refus
-              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowRefusForm(false)}>Annuler</Button>
+              <Button variant="danger" className="flex-1" loading={submitting} onClick={handleRefuse}>Confirmer le refus</Button>
             </div>
           </Card>
         ) : (
-          /* Action buttons */
           <div className="space-y-3">
-            <Button
-              onClick={handleValidate}
-              loading={submitting}
-              className="w-full"
-              size="lg"
-            >
+            <Button onClick={handleValidate} loading={submitting} className="w-full" size="lg">
               <CheckCircle className="w-5 h-5" />
               Valider l'intervention
             </Button>
             
-            <Button
-              variant="outline"
-              onClick={() => setShowRefusForm(true)}
-              className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
-              size="lg"
-            >
+            <Button variant="outline" onClick={() => setShowRefusForm(true)} className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10" size="lg">
               <XCircle className="w-5 h-5" />
               Signaler un problème
             </Button>
           </div>
         )}
 
-        {/* Footer */}
         <p className="text-center text-zinc-600 text-xs pt-4">
           Ce lien expire dans 72h.<br />
           En cas de problème, contactez EOIA Energie.
