@@ -306,7 +306,7 @@ export default function ClientValidationPage() {
           </div>
         </Card>
 
-        {/* Photos AVANT */}
+{/* Photos AVANT */}
         {photosBefore.length > 0 && (
           <Card className="p-5">
             <p className="text-white font-medium mb-3">📷 Photos AVANT intervention</p>
@@ -353,7 +353,6 @@ export default function ClientValidationPage() {
             </div>
           </Card>
         )}
-
         {/* Documents */}
         {chantier.documents && chantier.documents.length > 0 && (
           <Card className="p-5">
