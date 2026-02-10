@@ -25,20 +25,39 @@ export default function ChantierDetailPage() {
   const { chantier, loading, error, refetch } = useChantier(id)
   const [editModalOpen, setEditModalOpen] = useState(false)
 
-  async function handleResend() {
-    try {
-      const { error } = await supabase.functions.invoke('notify-client', {
-        body: { chantierId: chantier.id }
+async function handleResend() {
+  try {
+    // Générer un nouveau token et nouvelle expiration
+    const newToken = crypto.randomUUID()
+    const newExpiration = new Date()
+    newExpiration.setHours(newExpiration.getHours() + 72)
+
+    // Mettre à jour le chantier avec le nouveau token
+    const { error: updateError } = await supabase
+      .from('chantiers')
+      .update({
+        validation_token: newToken,
+        validation_expires_at: newExpiration.toISOString(),
+        status: STATUTS.PENDING_CLIENT
       })
+      .eq('id', chantier.id)
 
-      if (error) throw error
-      toast.success('Lien de validation renvoyé au client')
-    } catch (err) {
-      console.error('Resend error:', err)
-      toast.error('Erreur lors de l\'envoi')
-    }
+    if (updateError) throw updateError
+
+    // Envoyer la notification avec le nouveau lien
+    const { error } = await supabase.functions.invoke('notify-client', {
+      body: { chantierId: chantier.id }
+    })
+
+    if (error) throw error
+    
+    toast.success('Nouveau lien de validation envoyé au client')
+    refetch?.()
+  } catch (err) {
+    console.error('Resend error:', err)
+    toast.error('Erreur lors de l\'envoi')
   }
-
+}
   async function handleDownloadPDF() {
     try {
       const photos = chantier.photos?.map(p => p.url) || []
