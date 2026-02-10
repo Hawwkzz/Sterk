@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { Zap, MapPin, Calendar, User, CheckCircle, XCircle, Camera, X, AlertTriangle, Clock, Loader2 } from 'lucide-react'
+import { Zap, MapPin, Calendar, User, CheckCircle, XCircle, Camera, X, AlertTriangle, Clock, Loader2, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDate, formatNumber } from '../lib/utils'
 import { STATUTS } from '../lib/constants'
@@ -37,7 +37,8 @@ export default function ClientValidationPage() {
           .select(`
             *,
             equipe:equipes(name),
-            photos:chantier_photos(id, url)
+            photos:chantier_photos(id, url, photo_type),
+            documents:chantier_documents(id, url, filename, file_type)
           `)
           .eq('validation_token', token)
           .single()
@@ -246,6 +247,10 @@ export default function ClientValidationPage() {
     )
   }
 
+  // Séparer les photos avant et après
+  const photosBefore = chantier.photos?.filter(p => p.photo_type === 'before') || []
+  const photosAfter = chantier.photos?.filter(p => p.photo_type === 'after' || !p.photo_type) || []
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <Toaster position="top-center" />
@@ -301,13 +306,13 @@ export default function ClientValidationPage() {
           </div>
         </Card>
 
-        {/* Photos */}
-        {chantier.photos && chantier.photos.length > 0 && (
+        {/* Photos AVANT */}
+        {photosBefore.length > 0 && (
           <Card className="p-5">
-            <p className="text-white font-medium mb-3">Photos de l'intervention</p>
+            <p className="text-white font-medium mb-3">📷 Photos AVANT intervention</p>
             <div className="grid grid-cols-3 gap-2">
-              {chantier.photos.map(photo => (
-                <a
+              {photosBefore.map(photo => (
+                
                   key={photo.id}
                   href={photo.url}
                   target="_blank"
@@ -316,9 +321,58 @@ export default function ClientValidationPage() {
                 >
                   <img
                     src={photo.url}
-                    alt="Photo"
+                    alt="Photo avant"
                     className="w-full h-full object-cover"
                   />
+                </a>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Photos APRÈS */}
+        {photosAfter.length > 0 && (
+          <Card className="p-5">
+            <p className="text-white font-medium mb-3">📷 Photos APRÈS intervention</p>
+            <div className="grid grid-cols-3 gap-2">
+              {photosAfter.map(photo => (
+                
+                  key={photo.id}
+                  href={photo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="aspect-square rounded-lg overflow-hidden bg-zinc-800"
+                >
+                  <img
+                    src={photo.url}
+                    alt="Photo après"
+                    className="w-full h-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Documents */}
+        {chantier.documents && chantier.documents.length > 0 && (
+          <Card className="p-5">
+            <p className="text-white font-medium mb-3">📄 Documents joints</p>
+            <div className="space-y-2">
+              {chantier.documents.map(doc => (
+                
+                  key={doc.id}
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <span className="text-sm text-zinc-300 flex-1 truncate">
+                    {doc.filename || 'Document'}
+                  </span>
                 </a>
               ))}
             </div>
