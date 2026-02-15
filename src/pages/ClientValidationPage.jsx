@@ -7,6 +7,12 @@ import { STATUTS } from '../lib/constants'
 import { Button, Input, Textarea, Card } from '../components/ui'
 import toast, { Toaster } from 'react-hot-toast'
 
+// Helper : ouvrir un lien externe sans quitter la PWA
+function openExternal(url, e) {
+  if (e) e.preventDefault()
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 export default function ClientValidationPage() {
   const { token } = useParams()
   const [searchParams] = useSearchParams()
@@ -298,9 +304,13 @@ export default function ClientValidationPage() {
             <p className="text-white font-medium mb-3">📷 Photos AVANT intervention</p>
             <div className="grid grid-cols-3 gap-2">
               {photosBefore.map(photo => (
-                <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden bg-zinc-800">
+                <button
+                  key={photo.id}
+                  onClick={(e) => openExternal(photo.url, e)}
+                  className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
+                >
                   <img src={photo.url} alt="Photo avant" className="w-full h-full object-cover" />
-                </a>
+                </button>
               ))}
             </div>
           </Card>
@@ -311,9 +321,13 @@ export default function ClientValidationPage() {
             <p className="text-white font-medium mb-3">📷 Photos APRÈS intervention</p>
             <div className="grid grid-cols-3 gap-2">
               {photosAfter.map(photo => (
-                <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden bg-zinc-800">
+                <button
+                  key={photo.id}
+                  onClick={(e) => openExternal(photo.url, e)}
+                  className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
+                >
                   <img src={photo.url} alt="Photo après" className="w-full h-full object-cover" />
-                </a>
+                </button>
               ))}
             </div>
           </Card>
@@ -324,12 +338,16 @@ export default function ClientValidationPage() {
             <p className="text-white font-medium mb-3">📄 Documents joints</p>
             <div className="space-y-2">
               {chantier.documents.map(doc => (
-                <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors">
+                <button
+                  key={doc.id}
+                  onClick={(e) => openExternal(doc.url, e)}
+                  className="w-full flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors text-left"
+                >
                   <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
                     <FileText className="w-5 h-5 text-orange-400" />
                   </div>
                   <span className="text-sm text-zinc-300 flex-1 truncate">{doc.filename || 'Document'}</span>
-                </a>
+                </button>
               ))}
             </div>
           </Card>
