@@ -1,10 +1,33 @@
-// Nettoyer le service worker au chargement
+// ============================================
+// Service Worker : nettoyage et récupération
+// ============================================
 if ('serviceWorker' in navigator) {
+  // Forcer la mise à jour du SW au chargement
   navigator.serviceWorker.getRegistrations().then(registrations => {
     registrations.forEach(registration => {
       registration.update()
     })
   })
+
+  // Détecter si l'app est bloquée en chargement et forcer un recovery
+  // Si après 5 secondes le root est toujours vide, on vide le cache SW
+  setTimeout(() => {
+    const root = document.getElementById('root')
+    if (root && root.children.length === 0) {
+      console.warn('[SW Recovery] App seems stuck, clearing SW caches...')
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name))
+        }).then(() => {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(r => r.unregister())
+          }).then(() => {
+            window.location.reload()
+          })
+        })
+      }
+    }
+  }, 5000)
 }
 
 import React from 'react'
