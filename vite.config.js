@@ -41,6 +41,18 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // CRITICAL: Route toutes les navigations internes vers index.html
+        navigateFallback: '/index.html',
+        // CRITICAL: Exclure les URLs externes du service worker
+        // Cela empêche le SW d'intercepter les navigations vers Supabase, etc.
+        navigateFallbackDenylist: [
+          /^\/api/,
+          /supabase\.co/,
+          /supabase\.in/,
+          // Exclure toute URL qui n'est pas une route de l'app
+          /\.\w+$/,  // Fichiers avec extension (.pdf, .jpg, etc.)
+        ],
+        // Ne PAS cacher les requêtes API ou storage Supabase
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -69,6 +81,11 @@ export default defineConfig({
                 statuses: [0, 200]
               }
             }
+          },
+          {
+            // Supabase API & Storage - TOUJOURS réseau, jamais cache
+            urlPattern: /^https:\/\/.*\.supabase\.(co|in)\/.*/i,
+            handler: 'NetworkOnly',
           }
         ]
       }
