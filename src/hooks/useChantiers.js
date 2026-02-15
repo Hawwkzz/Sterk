@@ -5,6 +5,16 @@ import { getCurrentMonthRange, getCurrentYearRange } from '../lib/utils'
 import { STATUTS } from '../lib/constants'
 import toast from 'react-hot-toast'
 
+// Helper: timeout sur les requêtes Supabase
+function withTimeout(promise, ms = 10000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: requête trop longue')), ms)
+    )
+  ])
+}
+
 export function useChantiers(filters = {}) {
   const { equipe, isAdmin } = useAuth()
   const [chantiers, setChantiers] = useState([])
@@ -38,15 +48,14 @@ export function useChantiers(filters = {}) {
         query = query.lte('date_intervention', filters.dateTo)
       }
 
-      const { data, error: fetchError } = await query
+      const { data, error: fetchError } = await withTimeout(query)
 
       if (fetchError) throw fetchError
       setChantiers(data || [])
       setError(null)
     } catch (err) {
-      console.error('Error fetching chantiers:', err)
+      console.error('[useChantiers] Error:', err)
       setError(err.message)
-      toast.error('Erreur lors du chargement des chantiers')
     } finally {
       setLoading(false)
     }
@@ -55,6 +64,8 @@ export function useChantiers(filters = {}) {
   useEffect(() => {
     if (equipe || isAdmin) {
       fetchChantiers()
+    } else {
+      setLoading(false)
     }
   }, [fetchChantiers, equipe, isAdmin])
 
@@ -74,23 +85,25 @@ export function useChantier(chantierId) {
 
     try {
       setLoading(true)
-      const { data, error: fetchError } = await supabase
-        .from('chantiers')
-        .select(`
-          *,
-          equipe:equipes(id, name, responsable),
-          photos:chantier_photos(id, url, photo_type, created_at),
-          documents:chantier_documents(id, url, filename, file_type, created_at),
-          refus:chantier_refus(id, commentaire, created_at, photos:refus_photos(id, url))
-        `)
-        .eq('id', chantierId)
-        .single()
+      const { data, error: fetchError } = await withTimeout(
+        supabase
+          .from('chantiers')
+          .select(`
+            *,
+            equipe:equipes(id, name, responsable),
+            photos:chantier_photos(id, url, photo_type, created_at),
+            documents:chantier_documents(id, url, filename, file_type, created_at),
+            refus:chantier_refus(id, commentaire, created_at, photos:refus_photos(id, url))
+          `)
+          .eq('id', chantierId)
+          .single()
+      )
 
       if (fetchError) throw fetchError
       setChantier(data)
       setError(null)
     } catch (err) {
-      console.error('Error fetching chantier:', err)
+      console.error('[useChantier] Error:', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -139,16 +152,18 @@ export function useChantierStats() {
           query = query.eq('equipe_id', equipe.id)
         }
 
-        const { data: chantiers, error } = await query
+        const { data: chantiers, error } = await withTimeout(query)
 
         if (error) throw error
 
-        const monthChantiers = chantiers.filter(c => {
+        const allChantiers = chantiers || []
+
+        const monthChantiers = allChantiers.filter(c => {
           const date = new Date(c.created_at)
           return date >= monthStart && date <= monthEnd
         })
 
-        const yearChantiers = chantiers.filter(c => {
+        const yearChantiers = allChantiers.filter(c => {
           const date = new Date(c.created_at)
           return date >= yearStart && date <= yearEnd
         })
@@ -187,7 +202,7 @@ export function useChantierStats() {
           chantiersRefuses: monthChantiers.filter(c => c.status === STATUTS.REFUSE).length,
         })
       } catch (err) {
-        console.error('Error fetching stats:', err)
+        console.error('[useChantierStats] Error:', err)
       } finally {
         setLoading(false)
       }
@@ -211,19 +226,21 @@ export function useClassement() {
         setLoading(true)
         const { start: yearStart } = getCurrentYearRange()
 
-        const { data, error } = await supabase
-          .from('equipes')
-          .select(`
-            id,
-            name,
-            chantiers!inner(led_count, status, created_at)
-          `)
-          .eq('chantiers.status', STATUTS.VALIDE)
-          .gte('chantiers.created_at', yearStart.toISOString())
+        const { data, error } = await withTimeout(
+          supabase
+            .from('equipes')
+            .select(`
+              id,
+              name,
+              chantiers!inner(led_count, status, created_at)
+            `)
+            .eq('chantiers.status', STATUTS.VALIDE)
+            .gte('chantiers.created_at', yearStart.toISOString())
+        )
 
         if (error) throw error
 
-        const equipesWithLed = data.map(eq => {
+        const equipesWithLed = (data || []).map(eq => {
           const totalLed = eq.chantiers.reduce((sum, c) => sum + (c.led_count || 0), 0)
           const QUOTA = 1200
           const PRIME_PAR_LED = 5
@@ -250,7 +267,7 @@ export function useClassement() {
         const myPosition = ranked.find(eq => eq.isMe)
         setMyRank(myPosition?.rank || null)
       } catch (err) {
-        console.error('Error fetching classement:', err)
+        console.error('[useClassement] Error:', err)
       } finally {
         setLoading(false)
       }
