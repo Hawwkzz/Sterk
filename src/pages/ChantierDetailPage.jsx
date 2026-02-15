@@ -18,6 +18,13 @@ const STATUS_ICONS = {
   [STATUTS.DRAFT]: Clock,
 }
 
+// Helper : ouvrir un lien externe sans quitter la PWA
+function openExternal(url, e) {
+  if (e) e.preventDefault()
+  // window.open force un nouvel onglet/fenêtre même en mode PWA standalone
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 export default function ChantierDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -25,39 +32,37 @@ export default function ChantierDetailPage() {
   const { chantier, loading, error, refetch } = useChantier(id)
   const [editModalOpen, setEditModalOpen] = useState(false)
 
-async function handleResend() {
-  try {
-    // Générer un nouveau token et nouvelle expiration
-    const newToken = crypto.randomUUID()
-    const newExpiration = new Date()
-    newExpiration.setHours(newExpiration.getHours() + 72)
+  async function handleResend() {
+    try {
+      const newToken = crypto.randomUUID()
+      const newExpiration = new Date()
+      newExpiration.setHours(newExpiration.getHours() + 72)
 
-    // Mettre à jour le chantier avec le nouveau token
-    const { error: updateError } = await supabase
-      .from('chantiers')
-      .update({
-        validation_token: newToken,
-        validation_expires_at: newExpiration.toISOString(),
-        status: STATUTS.PENDING_CLIENT
+      const { error: updateError } = await supabase
+        .from('chantiers')
+        .update({
+          validation_token: newToken,
+          validation_expires_at: newExpiration.toISOString(),
+          status: STATUTS.PENDING_CLIENT
+        })
+        .eq('id', chantier.id)
+
+      if (updateError) throw updateError
+
+      const { error } = await supabase.functions.invoke('notify-client', {
+        body: { chantierId: chantier.id }
       })
-      .eq('id', chantier.id)
 
-    if (updateError) throw updateError
-
-    // Envoyer la notification avec le nouveau lien
-    const { error } = await supabase.functions.invoke('notify-client', {
-      body: { chantierId: chantier.id }
-    })
-
-    if (error) throw error
-    
-    toast.success('Nouveau lien de validation envoyé au client')
-    refetch?.()
-  } catch (err) {
-    console.error('Resend error:', err)
-    toast.error('Erreur lors de l\'envoi')
+      if (error) throw error
+      
+      toast.success('Nouveau lien de validation envoyé au client')
+      refetch?.()
+    } catch (err) {
+      console.error('Resend error:', err)
+      toast.error('Erreur lors de l\'envoi')
+    }
   }
-}
+
   async function handleDownloadPDF() {
     try {
       const photos = chantier.photos?.map(p => p.url) || []
@@ -222,19 +227,17 @@ async function handleResend() {
           <h2 className="text-lg font-semibold text-white mb-4">📷 Photos AVANT</h2>
           <div className="grid grid-cols-3 gap-2">
             {chantier.photos.filter(p => p.photo_type === 'before').map((photo) => (
-              <a
+              <button
                 key={photo.id}
-                href={photo.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="aspect-square rounded-lg overflow-hidden bg-zinc-800"
+                onClick={(e) => openExternal(photo.url, e)}
+                className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
               >
                 <img
                   src={photo.url}
                   alt="Photo avant"
                   className="w-full h-full object-cover hover:opacity-80 transition-opacity"
                 />
-              </a>
+              </button>
             ))}
           </div>
         </Card>
@@ -246,19 +249,17 @@ async function handleResend() {
           <h2 className="text-lg font-semibold text-white mb-4">📷 Photos APRÈS</h2>
           <div className="grid grid-cols-3 gap-2">
             {chantier.photos.filter(p => p.photo_type === 'after' || !p.photo_type).map((photo) => (
-              <a
+              <button
                 key={photo.id}
-                href={photo.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="aspect-square rounded-lg overflow-hidden bg-zinc-800"
+                onClick={(e) => openExternal(photo.url, e)}
+                className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
               >
                 <img
                   src={photo.url}
                   alt="Photo après"
                   className="w-full h-full object-cover hover:opacity-80 transition-opacity"
                 />
-              </a>
+              </button>
             ))}
           </div>
         </Card>
@@ -270,18 +271,16 @@ async function handleResend() {
           <h2 className="text-lg font-semibold text-white mb-4">📄 Documents</h2>
           <div className="space-y-2">
             {chantier.documents.map((doc) => (
-              <a
+              <button
                 key={doc.id}
-                href={doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors"
+                onClick={(e) => openExternal(doc.url, e)}
+                className="w-full flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors text-left"
               >
                 <Download className="w-5 h-5 text-orange-400 flex-shrink-0" />
                 <span className="text-sm text-zinc-300 flex-1 truncate">
                   {doc.filename || 'Document'}
                 </span>
-              </a>
+              </button>
             ))}
           </div>
         </Card>
@@ -301,19 +300,17 @@ async function handleResend() {
               {refus.photos && refus.photos.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mt-3">
                   {refus.photos.map((photo) => (
-                    <a
+                    <button
                       key={photo.id}
-                      href={photo.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="aspect-square rounded-lg overflow-hidden bg-zinc-800"
+                      onClick={(e) => openExternal(photo.url, e)}
+                      className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
                     >
                       <img
                         src={photo.url}
                         alt="Photo refus"
                         className="w-full h-full object-cover"
                       />
-                    </a>
+                    </button>
                   ))}
                 </div>
               )}
