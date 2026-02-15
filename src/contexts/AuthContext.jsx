@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
@@ -12,17 +12,42 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [equipe, setEquipe] = useState(null)
   const [loading, setLoading] = useState(true)
+  const loadingTimeout = useRef(null)
 
   useEffect(() => {
+    // SAFETY NET : si après 8 secondes on est toujours en loading, forcer l'arrêt
+    // Ça évite le spinner infini sur iOS PWA si getSession() plante
+    loadingTimeout.current = setTimeout(() => {
+      setLoading(prev => {
+        if (prev) {
+          console.warn('[Auth] Timeout: forcing loading to false after 8s')
+          return false
+        }
+        return prev
+      })
+    }, 8000)
+
     // Récupérer la session actuelle
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('[Auth] getSession error:', error)
+          setLoading(false)
+          return
+        }
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          fetchProfile(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        // CRITICAL: sans ce catch, une erreur = spinner infini
+        console.error('[Auth] getSession crashed:', err)
+        setUser(null)
         setLoading(false)
-      }
-    })
+      })
 
     // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -38,7 +63,12 @@ export function AuthProvider({ children }) {
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+      if (loadingTimeout.current) {
+        clearTimeout(loadingTimeout.current)
+      }
+    }
   }, [])
 
   async function fetchProfile(userId) {
@@ -66,7 +96,8 @@ export function AuthProvider({ children }) {
         }
       }
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('[Auth] Error fetching profile:', error)
+      // Même si le profil échoue, on arrête le loading pour ne pas bloquer l'app
     } finally {
       setLoading(false)
     }
