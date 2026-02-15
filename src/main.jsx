@@ -1,33 +1,23 @@
 // ============================================
-// Service Worker : nettoyage et récupération
+// NETTOYAGE AGRESSIF : supprimer tous les service workers et caches
 // ============================================
 if ('serviceWorker' in navigator) {
-  // Forcer la mise à jour du SW au chargement
   navigator.serviceWorker.getRegistrations().then(registrations => {
     registrations.forEach(registration => {
-      registration.update()
+      registration.unregister()
+      console.log('[SW] Unregistered service worker')
     })
   })
+}
 
-  // Détecter si l'app est bloquée en chargement et forcer un recovery
-  // Si après 5 secondes le root est toujours vide, on vide le cache SW
-  setTimeout(() => {
-    const root = document.getElementById('root')
-    if (root && root.children.length === 0) {
-      console.warn('[SW Recovery] App seems stuck, clearing SW caches...')
-      if ('caches' in window) {
-        caches.keys().then(names => {
-          names.forEach(name => caches.delete(name))
-        }).then(() => {
-          navigator.serviceWorker.getRegistrations().then(registrations => {
-            registrations.forEach(r => r.unregister())
-          }).then(() => {
-            window.location.reload()
-          })
-        })
-      }
-    }
-  }, 5000)
+// Vider tous les caches du service worker
+if ('caches' in window) {
+  caches.keys().then(names => {
+    names.forEach(name => {
+      caches.delete(name)
+      console.log('[Cache] Deleted cache:', name)
+    })
+  })
 }
 
 import React from 'react'
