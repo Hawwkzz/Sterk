@@ -90,7 +90,7 @@ export default function MediaViewer({ url, alt, onClose }) {
           />
         )}
 
-        {/* PDF — iframe embarqué, zéro navigation hors de l'app */}
+        {/* PDF — embarqué dans l'app, adapté mobile */}
         {isPDF && (
           <div
             className="w-full h-full flex flex-col px-2 pb-2"
@@ -105,7 +105,7 @@ export default function MediaViewer({ url, alt, onClose }) {
               </div>
             )}
             <iframe
-              src={url}
+              src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`}
               title={alt || 'Document PDF'}
               className="w-full flex-1 bg-white rounded-lg"
               onLoad={() => setIframeLoading(false)}
