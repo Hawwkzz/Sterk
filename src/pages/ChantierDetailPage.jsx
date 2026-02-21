@@ -9,6 +9,7 @@ import { generateChantierPDF, downloadPDF } from '../lib/pdf'
 import { Card, Button, Spinner, Badge } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import EditChantierModal from '../components/EditChantierModal'
+import MediaViewer from '../components/MediaViewer'
 import toast from 'react-hot-toast'
 
 const STATUS_ICONS = {
@@ -18,19 +19,14 @@ const STATUS_ICONS = {
   [STATUTS.DRAFT]: Clock,
 }
 
-// Helper : ouvrir un lien externe sans quitter la PWA
-function openExternal(url, e) {
-  if (e) e.preventDefault()
-  // window.open force un nouvel onglet/fenêtre même en mode PWA standalone
-  window.open(url, '_blank', 'noopener,noreferrer')
-}
-
 export default function ChantierDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { equipe } = useAuth()
   const { chantier, loading, error, refetch } = useChantier(id)
   const [editModalOpen, setEditModalOpen] = useState(false)
+  // Media viewer state — photo s'ouvre PAR-DESSUS l'app, aucune navigation
+  const [viewerMedia, setViewerMedia] = useState(null)
 
   async function handleResend() {
     try {
@@ -110,6 +106,15 @@ export default function ChantierDetailPage() {
 
   return (
     <div className="py-6 space-y-6">
+      {/* Viewer fullscreen — se superpose à tout, zéro navigation */}
+      {viewerMedia && (
+        <MediaViewer
+          url={viewerMedia.url}
+          alt={viewerMedia.alt}
+          onClose={() => setViewerMedia(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -229,7 +234,7 @@ export default function ChantierDetailPage() {
             {chantier.photos.filter(p => p.photo_type === 'before').map((photo) => (
               <button
                 key={photo.id}
-                onClick={(e) => openExternal(photo.url, e)}
+                onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo avant' })}
                 className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
               >
                 <img
@@ -251,7 +256,7 @@ export default function ChantierDetailPage() {
             {chantier.photos.filter(p => p.photo_type === 'after' || !p.photo_type).map((photo) => (
               <button
                 key={photo.id}
-                onClick={(e) => openExternal(photo.url, e)}
+                onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo après' })}
                 className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
               >
                 <img
@@ -273,7 +278,7 @@ export default function ChantierDetailPage() {
             {chantier.documents.map((doc) => (
               <button
                 key={doc.id}
-                onClick={(e) => openExternal(doc.url, e)}
+                onClick={() => setViewerMedia({ url: doc.url, alt: doc.filename || 'Document' })}
                 className="w-full flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors text-left"
               >
                 <Download className="w-5 h-5 text-orange-400 flex-shrink-0" />
@@ -302,7 +307,7 @@ export default function ChantierDetailPage() {
                   {refus.photos.map((photo) => (
                     <button
                       key={photo.id}
-                      onClick={(e) => openExternal(photo.url, e)}
+                      onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo refus' })}
                       className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
                     >
                       <img
