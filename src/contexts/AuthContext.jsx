@@ -12,42 +12,11 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [equipe, setEquipe] = useState(null)
   const [loading, setLoading] = useState(true)
-  const loadingTimeout = useRef(null)
+  const retryCount = useRef(0)
+  const maxRetries = 2
 
   useEffect(() => {
-    // SAFETY NET : si après 8 secondes on est toujours en loading, forcer l'arrêt
-    // Ça évite le spinner infini sur iOS PWA si getSession() plante
-    loadingTimeout.current = setTimeout(() => {
-      setLoading(prev => {
-        if (prev) {
-          console.warn('[Auth] Timeout: forcing loading to false after 8s')
-          return false
-        }
-        return prev
-      })
-    }, 8000)
-
-    // Récupérer la session actuelle
-    supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
-        if (error) {
-          console.error('[Auth] getSession error:', error)
-          setLoading(false)
-          return
-        }
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          fetchProfile(session.user.id)
-        } else {
-          setLoading(false)
-        }
-      })
-      .catch((err) => {
-        // CRITICAL: sans ce catch, une erreur = spinner infini
-        console.error('[Auth] getSession crashed:', err)
-        setUser(null)
-        setLoading(false)
-      })
+    initAuth()
 
     // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -65,31 +34,70 @@ export function AuthProvider({ children }) {
 
     return () => {
       subscription.unsubscribe()
-      if (loadingTimeout.current) {
-        clearTimeout(loadingTimeout.current)
-      }
     }
   }, [])
 
+  async function initAuth() {
+    try {
+      const { data: { session }, error } = await withTimeout(
+        supabase.auth.getSession(),
+        4000
+      )
+
+      if (error) {
+        console.error('[Auth] getSession error:', error)
+        // Retry si c'est le premier essai (cold start Supabase)
+        if (retryCount.current < maxRetries) {
+          retryCount.current++
+          console.log(`[Auth] Retry ${retryCount.current}/${maxRetries}...`)
+          return initAuth()
+        }
+        setLoading(false)
+        return
+      }
+
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        await fetchProfile(session.user.id)
+      } else {
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('[Auth] getSession crashed:', err)
+      // Retry sur timeout (cold start)
+      if (retryCount.current < maxRetries) {
+        retryCount.current++
+        console.log(`[Auth] Retry ${retryCount.current}/${maxRetries} après timeout...`)
+        return initAuth()
+      }
+      setUser(null)
+      setLoading(false)
+    }
+  }
+
   async function fetchProfile(userId) {
     try {
-      // Récupérer le profil utilisateur
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
+      const { data: profileData, error: profileError } = await withTimeout(
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single(),
+        10000
+      )
 
       if (profileError) throw profileError
       setProfile(profileData)
 
-      // Si c'est une équipe, récupérer les infos de l'équipe
       if (profileData.equipe_id) {
-        const { data: equipeData, error: equipeError } = await supabase
-          .from('equipes')
-          .select('*')
-          .eq('id', profileData.equipe_id)
-          .single()
+        const { data: equipeData, error: equipeError } = await withTimeout(
+          supabase
+            .from('equipes')
+            .select('*')
+            .eq('id', profileData.equipe_id)
+            .single(),
+          10000
+        )
 
         if (!equipeError) {
           setEquipe(equipeData)
@@ -97,7 +105,6 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       console.error('[Auth] Error fetching profile:', error)
-      // Même si le profil échoue, on arrête le loading pour ne pas bloquer l'app
     } finally {
       setLoading(false)
     }
@@ -153,4 +160,19 @@ export function AuthProvider({ children }) {
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+// ---- Helpers ----
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout après ${ms / 1000}s`)), ms)
+    )
+  ])
 }
