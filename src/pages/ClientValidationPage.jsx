@@ -5,13 +5,8 @@ import { supabase } from '../lib/supabase'
 import { formatDate, formatNumber } from '../lib/utils'
 import { STATUTS } from '../lib/constants'
 import { Button, Input, Textarea, Card } from '../components/ui'
+import MediaViewer from '../components/MediaViewer'
 import toast, { Toaster } from 'react-hot-toast'
-
-// Helper : ouvrir un lien externe sans quitter la PWA
-function openExternal(url, e) {
-  if (e) e.preventDefault()
-  window.open(url, '_blank', 'noopener,noreferrer')
-}
 
 export default function ClientValidationPage() {
   const { token } = useParams()
@@ -23,6 +18,8 @@ export default function ClientValidationPage() {
   const [error, setError] = useState(null)
   const [completed, setCompleted] = useState(false)
   const [showRefusForm, setShowRefusForm] = useState(false)
+  // Media viewer state
+  const [viewerMedia, setViewerMedia] = useState(null)
   
   const [refusComment, setRefusComment] = useState('')
   const [refusPhotos, setRefusPhotos] = useState([])
@@ -249,6 +246,15 @@ export default function ClientValidationPage() {
   return (
     <div className="min-h-screen bg-zinc-950">
       <Toaster position="top-center" />
+
+      {/* Media viewer fullscreen */}
+      {viewerMedia && (
+        <MediaViewer
+          url={viewerMedia.url}
+          alt={viewerMedia.alt}
+          onClose={() => setViewerMedia(null)}
+        />
+      )}
       
       <div className="bg-gradient-to-br from-orange-600 to-amber-600 px-6 py-8 text-center">
         <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
@@ -306,7 +312,7 @@ export default function ClientValidationPage() {
               {photosBefore.map(photo => (
                 <button
                   key={photo.id}
-                  onClick={(e) => openExternal(photo.url, e)}
+                  onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo avant' })}
                   className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
                 >
                   <img src={photo.url} alt="Photo avant" className="w-full h-full object-cover" />
@@ -323,7 +329,7 @@ export default function ClientValidationPage() {
               {photosAfter.map(photo => (
                 <button
                   key={photo.id}
-                  onClick={(e) => openExternal(photo.url, e)}
+                  onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo après' })}
                   className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
                 >
                   <img src={photo.url} alt="Photo après" className="w-full h-full object-cover" />
@@ -340,7 +346,7 @@ export default function ClientValidationPage() {
               {chantier.documents.map(doc => (
                 <button
                   key={doc.id}
-                  onClick={(e) => openExternal(doc.url, e)}
+                  onClick={() => setViewerMedia({ url: doc.url, alt: doc.filename || 'Document' })}
                   className="w-full flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors text-left"
                 >
                   <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
