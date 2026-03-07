@@ -25,7 +25,6 @@ export default function ChantierDetailPage() {
   const { equipe } = useAuth()
   const { chantier, loading, error, refetch } = useChantier(id)
   const [editModalOpen, setEditModalOpen] = useState(false)
-  // Media viewer state — photo s'ouvre PAR-DESSUS l'app, aucune navigation
   const [viewerMedia, setViewerMedia] = useState(null)
 
   async function handleResend() {
@@ -55,19 +54,19 @@ export default function ChantierDetailPage() {
       refetch?.()
     } catch (err) {
       console.error('Resend error:', err)
-      toast.error('Erreur lors de l\'envoi')
+      toast.error("Erreur lors de l'envoi")
     }
   }
 
   async function handleDownloadPDF() {
     try {
-      const photos = chantier.photos?.map(p => p.url) || []
-      const doc = await generateChantierPDF(chantier, equipe, photos)
-      downloadPDF(doc, `rapport-chantier-${chantier.id}.pdf`)
-      toast.success('PDF téléchargé')
+      toast.loading('Génération du PDF...', { id: 'pdf' })
+      const doc = await generateChantierPDF(chantier, equipe)
+      downloadPDF(doc, `rapport-chantier-${chantier.id.slice(0, 8)}.pdf`)
+      toast.success('PDF téléchargé', { id: 'pdf' })
     } catch (err) {
       console.error('PDF error:', err)
-      toast.error('Erreur lors de la génération du PDF')
+      toast.error('Erreur lors de la génération du PDF', { id: 'pdf' })
     }
   }
 
@@ -106,7 +105,6 @@ export default function ChantierDetailPage() {
 
   return (
     <div className="py-6 space-y-6">
-      {/* Viewer fullscreen — se superpose à tout, zéro navigation */}
       {viewerMedia && (
         <MediaViewer
           url={viewerMedia.url}
@@ -151,7 +149,7 @@ export default function ChantierDetailPage() {
         </div>
       </div>
 
-      {/* LED count highlight */}
+      {/* LED count */}
       <div className="bg-gradient-to-r from-orange-500/20 to-amber-500/10 rounded-xl p-5 border border-orange-500/20 text-center">
         <div className="flex items-center justify-center gap-2 mb-1">
           <Zap className="w-6 h-6 text-orange-400" />
@@ -237,11 +235,7 @@ export default function ChantierDetailPage() {
                 onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo avant' })}
                 className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
               >
-                <img
-                  src={photo.url}
-                  alt="Photo avant"
-                  className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-                />
+                <img src={photo.url} alt="Photo avant" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
               </button>
             ))}
           </div>
@@ -259,11 +253,7 @@ export default function ChantierDetailPage() {
                 onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo après' })}
                 className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
               >
-                <img
-                  src={photo.url}
-                  alt="Photo après"
-                  className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-                />
+                <img src={photo.url} alt="Photo après" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
               </button>
             ))}
           </div>
@@ -282,9 +272,7 @@ export default function ChantierDetailPage() {
                 className="w-full flex items-center gap-3 bg-zinc-800 rounded-lg p-3 hover:bg-zinc-700 transition-colors text-left"
               >
                 <Download className="w-5 h-5 text-orange-400 flex-shrink-0" />
-                <span className="text-sm text-zinc-300 flex-1 truncate">
-                  {doc.filename || 'Document'}
-                </span>
+                <span className="text-sm text-zinc-300 flex-1 truncate">{doc.filename || 'Document'}</span>
               </button>
             ))}
           </div>
@@ -298,9 +286,7 @@ export default function ChantierDetailPage() {
           {chantier.refus.map((refus) => (
             <div key={refus.id}>
               <p className="text-white">{refus.commentaire}</p>
-              <p className="text-zinc-500 text-xs mt-2">
-                {formatDateTime(refus.created_at)}
-              </p>
+              <p className="text-zinc-500 text-xs mt-2">{formatDateTime(refus.created_at)}</p>
               
               {refus.photos && refus.photos.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mt-3">
@@ -310,11 +296,7 @@ export default function ChantierDetailPage() {
                       onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo refus' })}
                       className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
                     >
-                      <img
-                        src={photo.url}
-                        alt="Photo refus"
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={photo.url} alt="Photo refus" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -327,11 +309,7 @@ export default function ChantierDetailPage() {
       {/* Actions */}
       <div className="space-y-3">
         {chantier.status === STATUTS.DRAFT && (
-          <Button 
-            className="w-full" 
-            size="lg"
-            onClick={() => setEditModalOpen(true)}
-          >
+          <Button className="w-full" size="lg" onClick={() => setEditModalOpen(true)}>
             <Edit className="w-5 h-5" />
             Modifier et envoyer
           </Button>
@@ -345,21 +323,13 @@ export default function ChantierDetailPage() {
         )}
 
         {chantier.status === STATUTS.REFUSE && (
-          <Button 
-            className="w-full" 
-            size="lg"
-            onClick={() => setEditModalOpen(true)}
-          >
+          <Button className="w-full" size="lg" onClick={() => setEditModalOpen(true)}>
             <Edit className="w-5 h-5" />
             Corriger et renvoyer
           </Button>
         )}
 
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={handleDownloadPDF}
-        >
+        <Button variant="outline" className="w-full" onClick={handleDownloadPDF}>
           <Download className="w-5 h-5" />
           Télécharger le rapport PDF
         </Button>
@@ -367,17 +337,12 @@ export default function ChantierDetailPage() {
 
       {/* Métadonnées */}
       <div className="text-center pt-4">
-        <p className="text-zinc-600 text-xs">
-          Créé le {formatDateTime(chantier.created_at)}
-        </p>
+        <p className="text-zinc-600 text-xs">Créé le {formatDateTime(chantier.created_at)}</p>
         {chantier.validated_at && (
-          <p className="text-zinc-600 text-xs">
-            Validé le {formatDateTime(chantier.validated_at)}
-          </p>
+          <p className="text-zinc-600 text-xs">Validé le {formatDateTime(chantier.validated_at)}</p>
         )}
       </div>
 
-      {/* Modal d'édition */}
       <EditChantierModal
         open={editModalOpen}
         onClose={() => setEditModalOpen(false)}
