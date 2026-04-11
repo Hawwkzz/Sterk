@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { SECTEUR_DEFAUT } from '../lib/constants'
 
 const AuthContext = createContext({})
 
@@ -11,6 +12,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [equipe, setEquipe] = useState(null)
+  const [secteur, setSecteur] = useState(SECTEUR_DEFAUT)
   const [loading, setLoading] = useState(true)
   const retryCount = useRef(0)
   const maxRetries = 2
@@ -27,6 +29,7 @@ export function AuthProvider({ children }) {
         } else {
           setProfile(null)
           setEquipe(null)
+          setSecteur(SECTEUR_DEFAUT)
           setLoading(false)
         }
       }
@@ -46,7 +49,6 @@ export function AuthProvider({ children }) {
 
       if (error) {
         console.error('[Auth] getSession error:', error)
-        // Retry si c'est le premier essai (cold start Supabase)
         if (retryCount.current < maxRetries) {
           retryCount.current++
           console.log(`[Auth] Retry ${retryCount.current}/${maxRetries}...`)
@@ -57,6 +59,7 @@ export function AuthProvider({ children }) {
       }
 
       setUser(session?.user ?? null)
+
       if (session?.user) {
         await fetchProfile(session.user.id)
       } else {
@@ -64,7 +67,6 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error('[Auth] getSession crashed:', err)
-      // Retry sur timeout (cold start)
       if (retryCount.current < maxRetries) {
         retryCount.current++
         console.log(`[Auth] Retry ${retryCount.current}/${maxRetries} après timeout...`)
@@ -99,8 +101,24 @@ export function AuthProvider({ children }) {
           10000
         )
 
-        if (!equipeError) {
+        if (!equipeError && equipeData) {
           setEquipe(equipeData)
+
+          // Charger la config secteur de l'équipe
+          if (equipeData.secteur_id) {
+            const { data: secteurData, error: secteurError } = await withTimeout(
+              supabase
+                .from('secteurs')
+                .select('*')
+                .eq('id', equipeData.secteur_id)
+                .single(),
+              10000
+            )
+
+            if (!secteurError && secteurData) {
+              setSecteur(secteurData)
+            }
+          }
         }
       }
     } catch (error) {
@@ -124,6 +142,7 @@ export function AuthProvider({ children }) {
       setUser(null)
       setProfile(null)
       setEquipe(null)
+      setSecteur(SECTEUR_DEFAUT)
     }
     return { error }
   }
@@ -149,6 +168,7 @@ export function AuthProvider({ children }) {
     user,
     profile,
     equipe,
+    secteur,        // config complète du secteur (unit_label, quota_mensuel, prime_par_unite, …)
     loading,
     isAdmin,
     isEquipe,
@@ -163,11 +183,6 @@ export function AuthProvider({ children }) {
 }
 
 // ---- Helpers ----
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 function withTimeout(promise, ms) {
   return Promise.race([
     promise,
@@ -175,4 +190,4 @@ function withTimeout(promise, ms) {
       setTimeout(() => reject(new Error(`Timeout après ${ms / 1000}s`)), ms)
     )
   ])
-}
+      }
