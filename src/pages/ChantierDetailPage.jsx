@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Zap, MapPin, User, Mail, Phone, Calendar, CheckCircle, Clock, AlertCircle, Send, Download, Edit, MessageSquare } from 'lucide-react'
 import { useChantier } from '../hooks/useChantiers'
 import { supabase } from '../lib/supabase'
-import { STATUT_CONFIG, STATUTS } from '../lib/constants'
+import { STATUT_CONFIG, STATUTS, SECTEUR_DEFAUT } from '../lib/constants'
 import { formatDate, formatDateTime, formatNumber } from '../lib/utils'
 import { generateChantierPDF, downloadPDF } from '../lib/pdf'
 import { Card, Button, Spinner, Badge } from '../components/ui'
@@ -22,7 +22,8 @@ const STATUS_ICONS = {
 export default function ChantierDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { equipe } = useAuth()
+  const { equipe, secteur: secteurRaw } = useAuth()
+  const secteur = secteurRaw || SECTEUR_DEFAUT
   const { chantier, loading, error, refetch } = useChantier(id)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [viewerMedia, setViewerMedia] = useState(null)
@@ -38,18 +39,17 @@ export default function ChantierDetailPage() {
         .update({
           validation_token: newToken,
           validation_expires_at: newExpiration.toISOString(),
-          status: STATUTS.PENDING_CLIENT
+          status: STATUTS.PENDING_CLIENT,
         })
         .eq('id', chantier.id)
 
       if (updateError) throw updateError
 
       const { error } = await supabase.functions.invoke('notify-client', {
-        body: { chantierId: chantier.id }
+        body: { chantierId: chantier.id },
       })
-
       if (error) throw error
-      
+
       toast.success('Nouveau lien de validation envoyé au client')
       refetch?.()
     } catch (err) {
@@ -76,8 +76,8 @@ export default function ChantierDetailPage() {
   }
 
   const canEdit = chantier && (
-    chantier.status === STATUTS.DRAFT || 
-    chantier.status === STATUTS.PENDING_CLIENT || 
+    chantier.status === STATUTS.DRAFT ||
+    chantier.status === STATUTS.PENDING_CLIENT ||
     chantier.status === STATUTS.REFUSE
   )
 
@@ -149,21 +149,20 @@ export default function ChantierDetailPage() {
         </div>
       </div>
 
-      {/* LED count */}
+      {/* Compteur unités */}
       <div className="bg-gradient-to-r from-orange-500/20 to-amber-500/10 rounded-xl p-5 border border-orange-500/20 text-center">
         <div className="flex items-center justify-center gap-2 mb-1">
           <Zap className="w-6 h-6 text-orange-400" />
           <span className="text-3xl font-black text-white">
-            {formatNumber(chantier.led_count)}
+            {formatNumber(chantier.unit_count)}
           </span>
         </div>
-        <p className="text-orange-300 text-sm">LED installées</p>
+        <p className="text-orange-300 text-sm">{secteur.unit_label_plural} installé(e)s</p>
       </div>
 
       {/* Informations */}
       <Card className="p-5 space-y-4">
         <h2 className="text-lg font-semibold text-white mb-4">Informations</h2>
-        
         <div className="flex items-start gap-3">
           <MapPin className="w-5 h-5 text-zinc-500 mt-0.5" />
           <div>
@@ -171,7 +170,6 @@ export default function ChantierDetailPage() {
             <p className="text-white">{chantier.adresse}</p>
           </div>
         </div>
-
         <div className="flex items-start gap-3">
           <Calendar className="w-5 h-5 text-zinc-500 mt-0.5" />
           <div>
@@ -179,9 +177,7 @@ export default function ChantierDetailPage() {
             <p className="text-white">{formatDate(chantier.date_intervention)}</p>
           </div>
         </div>
-
         <hr className="border-zinc-700/50" />
-
         <div className="flex items-start gap-3">
           <User className="w-5 h-5 text-zinc-500 mt-0.5" />
           <div>
@@ -189,7 +185,6 @@ export default function ChantierDetailPage() {
             <p className="text-white">{chantier.client_name}</p>
           </div>
         </div>
-
         {chantier.client_email && (
           <div className="flex items-start gap-3">
             <Mail className="w-5 h-5 text-zinc-500 mt-0.5" />
@@ -199,7 +194,6 @@ export default function ChantierDetailPage() {
             </div>
           </div>
         )}
-
         {chantier.client_phone && (
           <div className="flex items-start gap-3">
             <Phone className="w-5 h-5 text-zinc-500 mt-0.5" />
@@ -209,7 +203,6 @@ export default function ChantierDetailPage() {
             </div>
           </div>
         )}
-
         {chantier.commentaire && (
           <>
             <hr className="border-zinc-700/50" />
@@ -287,7 +280,6 @@ export default function ChantierDetailPage() {
             <div key={refus.id}>
               <p className="text-white">{refus.commentaire}</p>
               <p className="text-zinc-500 text-xs mt-2">{formatDateTime(refus.created_at)}</p>
-              
               {refus.photos && refus.photos.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mt-3">
                   {refus.photos.map((photo) => (
@@ -314,21 +306,18 @@ export default function ChantierDetailPage() {
             Modifier et envoyer
           </Button>
         )}
-
         {chantier.status === STATUTS.PENDING_CLIENT && (
           <Button className="w-full" size="lg" variant="secondary" onClick={handleResend}>
             <Send className="w-5 h-5" />
             Renvoyer le lien
           </Button>
         )}
-
         {chantier.status === STATUTS.REFUSE && (
           <Button className="w-full" size="lg" onClick={() => setEditModalOpen(true)}>
             <Edit className="w-5 h-5" />
             Corriger et renvoyer
           </Button>
         )}
-
         <Button variant="outline" className="w-full" onClick={handleDownloadPDF}>
           <Download className="w-5 h-5" />
           Télécharger le rapport PDF
@@ -351,4 +340,4 @@ export default function ChantierDetailPage() {
       />
     </div>
   )
-}
+                                                             }
