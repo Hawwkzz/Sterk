@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, ChevronRight, Zap, CheckCircle, Clock, AlertCircle, FileText, Search, Filter } from 'lucide-react'
 import { useChantiers } from '../hooks/useChantiers'
-import { STATUT_CONFIG, STATUTS } from '../lib/constants'
+import { useAuth } from '../contexts/AuthContext'
+import { STATUT_CONFIG, STATUTS, SECTEUR_DEFAUT } from '../lib/constants'
 import { formatDate, formatNumber } from '../lib/utils'
 import { Card, Button, Input, Spinner, EmptyState, Badge } from '../components/ui'
 import NewChantierModal from '../components/NewChantierModal'
@@ -24,10 +25,12 @@ const FILTERS = [
 ]
 
 export default function ChantiersPage() {
+  const { secteur: secteurRaw } = useAuth()
+  const secteur = secteurRaw || SECTEUR_DEFAUT
+
   const [showNewChantier, setShowNewChantier] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  
   const { chantiers, loading, refetch } = useChantiers({ status: statusFilter || undefined })
 
   // Filtrer par recherche
@@ -45,11 +48,7 @@ export default function ChantiersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Chantiers</h1>
-        <Button
-          onClick={() => setShowNewChantier(true)}
-          size="sm"
-          className="gap-1"
-        >
+        <Button onClick={() => setShowNewChantier(true)} size="sm" className="gap-1">
           <Plus className="w-4 h-4" />
           Nouveau
         </Button>
@@ -90,7 +89,11 @@ export default function ChantiersPage() {
         <EmptyState
           icon={FileText}
           title="Aucun chantier"
-          description={searchQuery || statusFilter ? "Aucun chantier ne correspond à vos critères" : "Commencez par créer votre premier chantier"}
+          description={
+            searchQuery || statusFilter
+              ? 'Aucun chantier ne correspond à vos critères'
+              : 'Commencez par créer votre premier chantier'
+          }
           action={
             !searchQuery && !statusFilter && (
               <Button onClick={() => setShowNewChantier(true)} size="sm">
@@ -105,27 +108,21 @@ export default function ChantiersPage() {
           {filteredChantiers.map((chantier) => {
             const config = STATUT_CONFIG[chantier.status] || STATUT_CONFIG[STATUTS.DRAFT]
             const StatusIcon = STATUS_ICONS[chantier.status] || FileText
-
             return (
-              <Link
-                key={chantier.id}
-                to={`/chantiers/${chantier.id}`}
-                className="block"
-              >
+              <Link key={chantier.id} to={`/chantiers/${chantier.id}`} className="block">
                 <Card className="p-4 hover:bg-zinc-800/70 transition-colors">
                   <div className="flex items-start gap-4">
                     <div className={`w-12 h-12 rounded-xl ${config.bgColor} flex items-center justify-center flex-shrink-0`}>
                       <StatusIcon className={`w-6 h-6 ${config.textColor}`} />
                     </div>
-                    
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <Badge
                           variant={
-                            chantier.status === STATUTS.VALIDE ? 'success' :
-                            chantier.status === STATUTS.REFUSE ? 'danger' :
-                            chantier.status === STATUTS.PENDING_CLIENT ? 'warning' :
-                            'default'
+                            chantier.status === STATUTS.VALIDE ? 'success'
+                            : chantier.status === STATUTS.REFUSE ? 'danger'
+                            : chantier.status === STATUTS.PENDING_CLIENT ? 'warning'
+                            : 'default'
                           }
                         >
                           {config.label}
@@ -134,15 +131,11 @@ export default function ChantiersPage() {
                           {formatDate(chantier.created_at, 'dd MMM')}
                         </span>
                       </div>
-                      
-                      <p className="text-white font-medium truncate">
-                        {chantier.adresse}
-                      </p>
-                      
+                      <p className="text-white font-medium truncate">{chantier.adresse}</p>
                       <div className="flex items-center gap-3 mt-2">
                         <span className="flex items-center gap-1 text-zinc-400 text-sm">
                           <Zap className="w-4 h-4" />
-                          {formatNumber(chantier.led_count)} LED
+                          {formatNumber(chantier.unit_count)} {secteur.unit_label}
                         </span>
                         <span className="text-zinc-600">·</span>
                         <span className="text-zinc-400 text-sm truncate">
@@ -150,7 +143,6 @@ export default function ChantiersPage() {
                         </span>
                       </div>
                     </div>
-                    
                     <ChevronRight className="w-5 h-5 text-zinc-600 flex-shrink-0 mt-3" />
                   </div>
                 </Card>
@@ -171,4 +163,4 @@ export default function ChantiersPage() {
       />
     </div>
   )
-}
+              }
