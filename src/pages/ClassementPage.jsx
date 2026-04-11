@@ -1,11 +1,15 @@
 import { Trophy, Medal, Award, TrendingUp, Zap } from 'lucide-react'
 import { useClassement } from '../hooks/useChantiers'
+import { useAuth } from '../contexts/AuthContext'
 import { formatNumber, formatCurrency } from '../lib/utils'
+import { SECTEUR_DEFAUT } from '../lib/constants'
 import { Card, Spinner } from '../components/ui'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
 export default function ClassementPage() {
+  const { secteur: secteurRaw } = useAuth()
+  const secteur = secteurRaw || SECTEUR_DEFAUT
   const { classement, myRank, loading } = useClassement()
 
   if (loading) {
@@ -52,7 +56,9 @@ export default function ClassementPage() {
                 <p className={`font-medium text-sm ${podium[1].isMe ? 'text-orange-400' : 'text-white'}`}>
                   {podium[1].name}
                 </p>
-                <p className="text-zinc-500 text-xs">{formatNumber(podium[1].totalLed)} LED</p>
+                <p className="text-zinc-500 text-xs">
+                  {formatNumber(podium[1].totalLed)} {secteur.unit_label}
+                </p>
                 <div className="w-20 h-20 bg-zinc-700 rounded-t-lg mt-2 flex items-center justify-center">
                   <span className="text-zinc-400 text-lg font-bold">2</span>
                 </div>
@@ -68,7 +74,9 @@ export default function ClassementPage() {
                 <p className={`font-bold ${podium[0].isMe ? 'text-orange-400' : 'text-white'}`}>
                   {podium[0].name}
                 </p>
-                <p className="text-orange-400 text-sm font-medium">{formatNumber(podium[0].totalLed)} LED</p>
+                <p className="text-orange-400 text-sm font-medium">
+                  {formatNumber(podium[0].totalLed)} {secteur.unit_label}
+                </p>
                 <div className="w-20 h-28 bg-gradient-to-t from-orange-600 to-amber-500 rounded-t-lg mt-2 flex items-center justify-center">
                   <span className="text-white text-xl font-bold">1</span>
                 </div>
@@ -84,7 +92,9 @@ export default function ClassementPage() {
                 <p className={`font-medium text-sm ${podium[2].isMe ? 'text-orange-400' : 'text-white'}`}>
                   {podium[2].name}
                 </p>
-                <p className="text-zinc-500 text-xs">{formatNumber(podium[2].totalLed)} LED</p>
+                <p className="text-zinc-500 text-xs">
+                  {formatNumber(podium[2].totalLed)} {secteur.unit_label}
+                </p>
                 <div className="w-20 h-14 bg-amber-800 rounded-t-lg mt-2 flex items-center justify-center">
                   <span className="text-amber-200 text-lg font-bold">3</span>
                 </div>
@@ -97,20 +107,13 @@ export default function ClassementPage() {
             {classement.map((eq) => (
               <Card
                 key={eq.id}
-                className={`p-4 flex items-center gap-4 ${
-                  eq.isMe ? 'border-orange-500/30 bg-orange-500/10' : ''
-                }`}
+                className={`p-4 flex items-center gap-4 ${eq.isMe ? 'border-orange-500/30 bg-orange-500/10' : ''}`}
               >
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                    eq.rank <= 3
-                      ? 'bg-amber-500/20 text-amber-400'
-                      : 'bg-zinc-700 text-zinc-400'
-                  }`}
-                >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                  eq.rank <= 3 ? 'bg-amber-500/20 text-amber-400' : 'bg-zinc-700 text-zinc-400'
+                }`}>
                   {eq.rank <= 3 ? MEDALS[eq.rank - 1] : eq.rank}
                 </div>
-                
                 <div className="flex-1">
                   <p className={`font-medium ${eq.isMe ? 'text-orange-400' : 'text-white'}`}>
                     {eq.name}
@@ -118,10 +121,9 @@ export default function ClassementPage() {
                   </p>
                   <div className="flex items-center gap-1 text-zinc-500 text-sm">
                     <Zap className="w-3 h-3" />
-                    {formatNumber(eq.totalLed)} LED validées
+                    {formatNumber(eq.totalLed)} {secteur.unit_label_plural} validé(e)s
                   </div>
                 </div>
-                
                 <div className="text-right">
                   <p className="text-white font-bold">{formatCurrency(eq.prime)}</p>
                   <p className="text-zinc-500 text-xs">prime</p>
@@ -132,10 +134,10 @@ export default function ClassementPage() {
 
           {/* Info */}
           <p className="text-center text-zinc-600 text-xs pt-4">
-            Classement basé sur les LED validées depuis le début de l'année
+            Classement basé sur les {secteur.unit_label_plural} validé(e)s depuis le début de l'année
           </p>
         </>
       )}
     </div>
   )
-}
+                  }
