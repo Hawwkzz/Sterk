@@ -2,21 +2,22 @@ import { Link } from 'react-router-dom'
 import { ChevronRight, Clock, AlertCircle, Trophy, Zap, Award, CheckCircle, FileText } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useChantiers, useChantierStats, useClassement } from '../hooks/useChantiers'
-import { QUOTA_MENSUEL, STATUT_CONFIG, STATUTS } from '../lib/constants'
+import { STATUT_CONFIG, STATUTS, SECTEUR_DEFAUT } from '../lib/constants'
 import { formatDate, formatNumber, formatCurrency } from '../lib/utils'
 import { Card, ProgressBar, Spinner } from '../components/ui'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
 export default function HomePage() {
-  const { equipe } = useAuth()
+  const { equipe, secteur: secteurRaw } = useAuth()
+  const secteur = secteurRaw || SECTEUR_DEFAUT
   const { stats, loading: statsLoading } = useChantierStats()
   const { classement, myRank, loading: classementLoading } = useClassement()
   const { chantiers, loading: chantiersLoading } = useChantiers()
 
   const currentMonth = format(new Date(), 'MMMM yyyy', { locale: fr })
-  const progressQuota = Math.min((stats.ledValidees / QUOTA_MENSUEL) * 100, 100)
-  const surQuota = stats.ledValidees > QUOTA_MENSUEL
+  const progressQuota = Math.min((stats.ledValidees / secteur.quota_mensuel) * 100, 100)
+  const surQuota = stats.ledValidees > secteur.quota_mensuel
 
   // 3 derniers chantiers
   const recentChantiers = chantiers.slice(0, 3)
@@ -47,7 +48,6 @@ export default function HomePage() {
       {/* Carte principale - Quota */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 p-6 border border-zinc-700/50">
         <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl" />
-        
         <div className="flex justify-between items-start mb-4">
           <div>
             <p className="text-zinc-400 text-sm">Production mensuelle</p>
@@ -55,19 +55,18 @@ export default function HomePage() {
               <span className="text-4xl font-black text-white">
                 {formatNumber(stats.ledValidees)}
               </span>
-              <span className="text-zinc-500">/ {formatNumber(QUOTA_MENSUEL)} LED</span>
+              <span className="text-zinc-500">/ {formatNumber(secteur.quota_mensuel)} {secteur.unit_label}</span>
             </div>
           </div>
           {surQuota && (
             <div className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30">
               <span className="text-emerald-400 text-sm font-semibold">
-                +{formatNumber(stats.ledValidees - QUOTA_MENSUEL)} LED
+                +{formatNumber(stats.ledValidees - secteur.quota_mensuel)} {secteur.unit_label}
               </span>
             </div>
           )}
         </div>
-
-        <ProgressBar value={stats.ledValidees} max={QUOTA_MENSUEL} />
+        <ProgressBar value={stats.ledValidees} max={secteur.quota_mensuel} />
         <p className="text-zinc-500 text-xs mt-2">
           {progressQuota.toFixed(0)}% du quota atteint
         </p>
@@ -82,7 +81,6 @@ export default function HomePage() {
           <p className="text-2xl font-bold text-white">{formatNumber(stats.ledEnAttente)}</p>
           <p className="text-zinc-500 text-xs">En attente</p>
         </Card>
-        
         <Card className="p-4">
           <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center mb-2">
             <AlertCircle className="w-4 h-4 text-red-400" />
@@ -90,7 +88,6 @@ export default function HomePage() {
           <p className="text-2xl font-bold text-white">{formatNumber(stats.ledRefusees)}</p>
           <p className="text-zinc-500 text-xs">À corriger</p>
         </Card>
-        
         <Card className="p-4">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center mb-2">
             <Trophy className="w-4 h-4 text-emerald-400" />
@@ -116,7 +113,7 @@ export default function HomePage() {
           </div>
         </div>
         <p className="text-zinc-400 text-xs mt-3">
-          5€ par LED au-dessus du quota mensuel
+          {formatCurrency(secteur.prime_par_unite)} par {secteur.unit_label} au-dessus du quota mensuel
         </p>
       </div>
 
@@ -151,18 +148,12 @@ export default function HomePage() {
           <div className="space-y-2">
             {recentChantiers.map((chantier) => {
               const config = STATUT_CONFIG[chantier.status] || STATUT_CONFIG[STATUTS.DRAFT]
-              const StatusIcon = chantier.status === STATUTS.VALIDE 
-                ? CheckCircle 
-                : chantier.status === STATUTS.REFUSE 
-                  ? AlertCircle 
-                  : Clock
-
+              const StatusIcon =
+                chantier.status === STATUTS.VALIDE ? CheckCircle
+                : chantier.status === STATUTS.REFUSE ? AlertCircle
+                : Clock
               return (
-                <Link
-                  key={chantier.id}
-                  to={`/chantiers/${chantier.id}`}
-                  className="block"
-                >
+                <Link key={chantier.id} to={`/chantiers/${chantier.id}`} className="block">
                   <Card className="p-4 flex items-center gap-4 hover:bg-zinc-800/70 transition-colors">
                     <div className={`w-10 h-10 rounded-lg ${config.bgColor} flex items-center justify-center`}>
                       <StatusIcon className={`w-5 h-5 ${config.textColor}`} />
@@ -172,7 +163,7 @@ export default function HomePage() {
                         {chantier.adresse}
                       </p>
                       <p className="text-zinc-500 text-xs">
-                        {chantier.led_count} LED · {formatDate(chantier.created_at, 'dd MMM')}
+                        {chantier.unit_count} {secteur.unit_label} · {formatDate(chantier.created_at, 'dd MMM')}
                       </p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-zinc-600 flex-shrink-0" />
