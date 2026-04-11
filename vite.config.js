@@ -7,8 +7,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      selfDestroying: true,
+      strategies: 'generateSW',
       includeAssets: ['favicon.svg', 'icons/*.png'],
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+      },
       manifest: {
         name: 'EOIA Energie - Suivi Production',
         short_name: 'EOIA Energie',
