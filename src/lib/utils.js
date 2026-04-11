@@ -1,6 +1,6 @@
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { QUOTA_MENSUEL, PRIME_PAR_LED } from './constants'
+import { SECTEUR_DEFAUT } from './constants'
 
 // Formatage de dates
 export function formatDate(date, formatStr = 'dd MMM yyyy') {
@@ -30,14 +30,14 @@ export function getCurrentYearRange() {
   }
 }
 
-// Calcul de prime
-export function calculatePrime(ledValidees, quotaMensuel = QUOTA_MENSUEL) {
+// Calcul de prime (utilise le secteur par défaut si non fourni)
+export function calculatePrime(ledValidees, quotaMensuel = SECTEUR_DEFAUT.quota_mensuel, primeParUnite = SECTEUR_DEFAUT.prime_par_unite) {
   const ledSurQuota = Math.max(0, ledValidees - quotaMensuel)
-  return ledSurQuota * PRIME_PAR_LED
+  return ledSurQuota * primeParUnite
 }
 
 // Calcul du pourcentage de quota
-export function calculateQuotaProgress(ledValidees, quotaMensuel = QUOTA_MENSUEL) {
+export function calculateQuotaProgress(ledValidees, quotaMensuel = SECTEUR_DEFAUT.quota_mensuel) {
   return Math.min((ledValidees / quotaMensuel) * 100, 100)
 }
 
