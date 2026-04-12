@@ -1,8 +1,8 @@
-import { Building2, FileCheck, Users, Euro, AlertCircle, ArrowRight, FolderPlus } from 'lucide-react'
+import { Building2, FileCheck, Users, Euro, AlertCircle, ArrowRight, FolderPlus, TrendingUp, Clock, CheckCircle2, Zap, BarChart3 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useEntrepriseStats, useChantiersSansDossier } from '../hooks/useEntreprise'
-import { Card, Badge, Spinner, StatCard, Button } from '../components/ui'
+import { useEntrepriseStats, useChantiersSansDossier, useDossiersCEE } from '../hooks/useEntreprise'
+import { Card, Badge, Spinner, Button } from '../components/ui'
 import { CEE_STATUT_CONFIG, CEE_STATUTS } from '../lib/constants'
 import { formatCurrency } from '../lib/utils'
 
@@ -10,6 +10,7 @@ export default function EntrepriseDashboardPage() {
   const { entreprise } = useAuth()
   const { stats, loading } = useEntrepriseStats()
   const { chantiers: chantiersSansDossier } = useChantiersSansDossier()
+  const { dossiers: recentDossiers, loading: loadingDossiers } = useDossiersCEE()
   const navigate = useNavigate()
 
   if (loading) {
@@ -20,84 +21,143 @@ export default function EntrepriseDashboardPage() {
     )
   }
 
+  const primeEstimee = stats?.primeEstimee || 0
+  const primeRecue = stats?.primeRecue || 0
+  const totalDossiers = stats?.totalDossiers || 0
+  const dossiersValides = (stats?.parStatut?.[CEE_STATUTS.VALIDE] || 0) + (stats?.parStatut?.[CEE_STATUTS.PRIME_RECUE] || 0)
+  const dossiersEnCours = totalDossiers - dossiersValides - (stats?.parStatut?.[CEE_STATUTS.REFUSE] || 0)
+
   return (
-    <div className="py-6 space-y-6">
+    <div className="py-6 space-y-5">
       {/* Header */}
       <div>
+        <p className="text-zinc-500 text-sm">Bonjour,</p>
         <h1 className="text-2xl font-bold text-white">
           {entreprise?.nom || 'Mon entreprise'}
         </h1>
-        <p className="text-zinc-500 text-sm mt-1">Tableau de bord CEE</p>
       </div>
 
-      {/* Stats principales */}
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          icon={FileCheck}
-          label="Dossiers CEE"
-          value={stats?.totalDossiers || 0}
-          variant="default"
-        />
-        <StatCard
-          icon={Users}
-          label="Équipes"
-          value={stats?.nbEquipes || 0}
-          variant="default"
-        />
-        <StatCard
-          icon={Euro}
-          label="Primes estimées"
-          value={formatCurrency(stats?.primeEstimee || 0)}
-          variant="orange"
-        />
-        <StatCard
-          icon={Euro}
-          label="Primes reçues"
-          value={formatCurrency(stats?.primeRecue || 0)}
-          variant="default"
-        />
+      {/* Card prime principale */}
+      <div className="bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-zinc-900 rounded-2xl p-5 border border-orange-500/20">
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingUp className="w-5 h-5 text-orange-400" />
+          <span className="text-orange-300 text-sm font-medium">Primes CEE</span>
+        </div>
+        <div className="flex items-end justify-between mt-2">
+          <div>
+            <p className="text-3xl font-black text-white">{formatCurrency(primeEstimee)}</p>
+            <p className="text-zinc-400 text-xs mt-1">estimÃ©es au total</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-bold text-emerald-400">{formatCurrency(primeRecue)}</p>
+            <p className="text-zinc-500 text-xs">reÃ§ues</p>
+          </div>
+        </div>
+        {primeEstimee > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
+              <span>RÃ©cupÃ©ration</span>
+              <span>{primeEstimee > 0 ? Math.round((primeRecue / primeEstimee) * 100) : 0}%</span>
+            </div>
+            <div className="h-2 bg-zinc-700/50 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-orange-500 to-emerald-400 rounded-full transition-all duration-1000"
+                style={{ width: `${primeEstimee > 0 ? Math.min((primeRecue / primeEstimee) * 100, 100) : 0}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stats rapides */}
+      <div className="grid grid-cols-3 gap-2">
+        <Card className="p-3 text-center">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center mx-auto mb-1">
+            <FileCheck className="w-4 h-4 text-blue-400" />
+          </div>
+          <p className="text-xl font-bold text-white">{totalDossiers}</p>
+          <p className="text-zinc-500 text-[10px]">Dossiers</p>
+        </Card>
+        <Card className="p-3 text-center">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center mx-auto mb-1">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-xl font-bold text-white">{dossiersValides}</p>
+          <p className="text-zinc-500 text-[10px]">ValidÃ©s</p>
+        </Card>
+        <Card className="p-3 text-center">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center mx-auto mb-1">
+            <Users className="w-4 h-4 text-amber-400" />
+          </div>
+          <p className="text-xl font-bold text-white">{stats?.nbEquipes || 0}</p>
+          <p className="text-zinc-500 text-[10px]">Ãquipes</p>
+        </Card>
       </div>
 
       {/* Alerte chantiers sans dossier */}
       {chantiersSansDossier.length > 0 && (
-        <Card className="p-4 border-amber-500/30 bg-amber-500/5">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-5 h-5 text-amber-400" />
+        <button
+          onClick={() => navigate('/entreprise/dossiers?new=1')}
+          className="w-full text-left"
+        >
+          <Card className="p-4 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm">
+                  {chantiersSansDossier.length} chantier{chantiersSansDossier.length > 1 ? 's' : ''} validÃ©{chantiersSansDossier.length > 1 ? 's' : ''} sans dossier CEE
+                </p>
+                <p className="text-amber-300/70 text-xs mt-1">
+                  CrÃ©ez un dossier pour rÃ©cupÃ©rer vos primes d'Ã©nergie
+                </p>
+              </div>
+              <FolderPlus className="w-5 h-5 text-amber-400 flex-shrink-0 mt-1" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white font-medium text-sm">
-                {chantiersSansDossier.length} chantier{chantiersSansDossier.length > 1 ? 's' : ''} validé{chantiersSansDossier.length > 1 ? 's' : ''} sans dossier CEE
-              </p>
-              <p className="text-zinc-400 text-xs mt-1">
-                Créez un dossier pour récupérer les primes
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => navigate('/entreprise/dossiers?new=1')}
-            >
-              <FolderPlus className="w-4 h-4" />
-            </Button>
-          </div>
-        </Card>
+          </Card>
+        </button>
       )}
 
-      {/* Répartition par statut */}
-      {stats?.totalDossiers > 0 && (
+      {/* Pipeline des dossiers */}
+      {totalDossiers > 0 && (
         <Card className="p-4">
-          <h3 className="text-white font-semibold mb-3">Statuts des dossiers</h3>
+          <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-orange-400" />
+            Pipeline dossiers
+          </h3>
           <div className="space-y-2">
             {Object.entries(CEE_STATUT_CONFIG).map(([key, config]) => {
               const count = stats?.parStatut?.[key] || 0
               if (count === 0) return null
+              const percentage = (count / totalDossiers) * 100
+
+              const variantMap = {
+                emerald: 'success',
+                red: 'danger',
+                amber: 'warning',
+                blue: 'info',
+                purple: 'info',
+              }
+
               return (
-                <div key={key} className="flex items-center justify-between">
-                  <Badge variant={config.color === 'emerald' ? 'success' : config.color === 'red' ? 'danger' : config.color === 'amber' ? 'warning' : 'info'}>
+                <div key={key} className="flex items-center gap-3">
+                  <Badge variant={variantMap[config.color] || 'default'} className="w-28 justify-center text-center">
                     {config.label}
                   </Badge>
-                  <span className="text-white font-medium text-sm">{count}</span>
+                  <div className="flex-1 h-2 bg-zinc-700/50 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        config.color === 'emerald' ? 'bg-emerald-500'
+                        : config.color === 'amber' ? 'bg-amber-500'
+                        : config.color === 'red' ? 'bg-red-500'
+                        : config.color === 'purple' ? 'bg-purple-500'
+                        : 'bg-blue-500'
+                      }`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                  <span className="text-white font-medium text-sm w-6 text-right">{count}</span>
                 </div>
               )
             })}
@@ -105,7 +165,53 @@ export default function EntrepriseDashboardPage() {
         </Card>
       )}
 
-      {/* Accès rapide */}
+      {/* Derniers dossiers */}
+      {!loadingDossiers && recentDossiers.length > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">Derniers dossiers</h3>
+Dossiers && recentDossiers.length > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">Derniers dossiers</h3>
+            <button
+              onClick={() => navigate('/entreprise/dossiers')}
+              className="text-orange-400 text-xs hover:text-orange-300"
+            >
+              Voir tout
+            </button>
+          </div>
+          <div className="space-y-2">
+            {recentDossiers.slice(0, 3).map(dossier => {
+              const dConfig = CEE_STATUT_CONFIG[dossier.statut] || {}
+              const variantMap = {
+                emerald: 'success', red: 'danger', amber: 'warning', blue: 'info', purple: 'info',
+              }
+              return (
+                <button
+                  key={dossier.id}
+                  onClick={() => navigate(`/entreprise/dossiers/${dossier.id}`)}
+                  className="w-full flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">
+                      {dossier.chantier?.client_name || 'Client'}
+                    </p>
+                    <p className="text-zinc-500 text-xs truncate">
+                      {dossier.chantier?.equipe?.name}
+                    </p>
+                  </div>
+                  <Badge variant={variantMap[dConfig.color] || 'default'}>
+                    {dConfig.label || dossier.statut}
+                  </Badge>
+                </button>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* AccÃ¨s rapide */}
       <div className="space-y-2">
         <button
           onClick={() => navigate('/entreprise/dossiers')}
@@ -117,7 +223,7 @@ export default function EntrepriseDashboardPage() {
             </div>
             <div className="text-left">
               <p className="text-white font-medium text-sm">Dossiers CEE</p>
-              <p className="text-zinc-500 text-xs">Gérer les dossiers de primes</p>
+              <p className="text-zinc-500 text-xs">GÃ©rer les dossiers de primes</p>
             </div>
           </div>
           <ArrowRight className="w-5 h-5 text-zinc-500" />
@@ -132,8 +238,8 @@ export default function EntrepriseDashboardPage() {
               <Users className="w-5 h-5 text-blue-400" />
             </div>
             <div className="text-left">
-              <p className="text-white font-medium text-sm">Mes équipes</p>
-              <p className="text-zinc-500 text-xs">Voir la performance des équipes</p>
+              <p className="text-white font-medium text-sm">Mes Ã©quipes</p>
+              <p className="text-zinc-500 text-xs">Voir la performance des Ã©quipes</p>
             </div>
           </div>
           <ArrowRight className="w-5 h-5 text-zinc-500" />
