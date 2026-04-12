@@ -17,7 +17,7 @@ const adminNavItems = [
 const entrepriseNavItems = [
   { to: '/entreprise', icon: Home, label: 'Accueil' },
   { to: '/entreprise/dossiers', icon: FileCheck, label: 'Dossiers' },
-  { to: '/entreprise/equipes', icon: Users, label: 'Ãquipes' },
+  { to: '/entreprise/equipes', icon: Users, label: 'Équipes' },
 ]
 
 export default function Layout() {
@@ -30,7 +30,7 @@ export default function Layout() {
     return <Outlet />
   }
 
-  // SÃ©lectionner les bons items de navigation
+  // Sélectionner les bons items de navigation
   let allNavItems
   if (isEntreprise) {
     allNavItems = entrepriseNavItems
@@ -50,7 +50,7 @@ export default function Layout() {
             <div className="w-28 h-6 bg-zinc-900 rounded-full" />
           </div>
 
-          {/* Logo & Ã©quipe/entreprise */}
+          {/* Logo & équipe/entreprise */}
           <div className="px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
