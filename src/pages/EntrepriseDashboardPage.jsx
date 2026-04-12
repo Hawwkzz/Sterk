@@ -46,17 +46,17 @@ export default function EntrepriseDashboardPage() {
         <div className="flex items-end justify-between mt-2">
           <div>
             <p className="text-3xl font-black text-white">{formatCurrency(primeEstimee)}</p>
-            <p className="text-zinc-400 text-xs mt-1">estimÃ©es au total</p>
+            <p className="text-zinc-400 text-xs mt-1">estimées au total</p>
           </div>
           <div className="text-right">
             <p className="text-xl font-bold text-emerald-400">{formatCurrency(primeRecue)}</p>
-            <p className="text-zinc-500 text-xs">reÃ§ues</p>
+            <p className="text-zinc-500 text-xs">reçues</p>
           </div>
         </div>
         {primeEstimee > 0 && (
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
-              <span>RÃ©cupÃ©ration</span>
+              <span>Récupération</span>
               <span>{primeEstimee > 0 ? Math.round((primeRecue / primeEstimee) * 100) : 0}%</span>
             </div>
             <div className="h-2 bg-zinc-700/50 rounded-full overflow-hidden">
@@ -83,14 +83,14 @@ export default function EntrepriseDashboardPage() {
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="text-xl font-bold text-white">{dossiersValides}</p>
-          <p className="text-zinc-500 text-[10px]">ValidÃ©s</p>
+          <p className="text-zinc-500 text-[10px]">Validés</p>
         </Card>
         <Card className="p-3 text-center">
           <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center mx-auto mb-1">
             <Users className="w-4 h-4 text-amber-400" />
           </div>
           <p className="text-xl font-bold text-white">{stats?.nbEquipes || 0}</p>
-          <p className="text-zinc-500 text-[10px]">Ãquipes</p>
+          <p className="text-zinc-500 text-[10px]">Équipes</p>
         </Card>
       </div>
 
@@ -107,10 +107,10 @@ export default function EntrepriseDashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-medium text-sm">
-                  {chantiersSansDossier.length} chantier{chantiersSansDossier.length > 1 ? 's' : ''} validÃ©{chantiersSansDossier.length > 1 ? 's' : ''} sans dossier CEE
+                  {chantiersSansDossier.length} chantier{chantiersSansDossier.length > 1 ? 's' : ''} validé{chantiersSansDossier.length > 1 ? 's' : ''} sans dossier CEE
                 </p>
                 <p className="text-amber-300/70 text-xs mt-1">
-                  CrÃ©ez un dossier pour rÃ©cupÃ©rer vos primes d'Ã©nergie
+                  Créez un dossier pour récupérer vos primes d'énergie
                 </p>
               </div>
               <FolderPlus className="w-5 h-5 text-amber-400 flex-shrink-0 mt-1" />
@@ -170,10 +170,6 @@ export default function EntrepriseDashboardPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-semibold text-sm">Derniers dossiers</h3>
-Dossiers && recentDossiers.length > 0 && (
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-semibold text-sm">Derniers dossiers</h3>
             <button
               onClick={() => navigate('/entreprise/dossiers')}
               className="text-orange-400 text-xs hover:text-orange-300"
@@ -210,41 +206,3 @@ Dossiers && recentDossiers.length > 0 && (
           </div>
         </Card>
       )}
-
-      {/* AccÃ¨s rapide */}
-      <div className="space-y-2">
-        <button
-          onClick={() => navigate('/entreprise/dossiers')}
-          className="w-full flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/30 hover:bg-zinc-800 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
-              <FileCheck className="w-5 h-5 text-orange-400" />
-            </div>
-            <div className="text-left">
-              <p className="text-white font-medium text-sm">Dossiers CEE</p>
-              <p className="text-zinc-500 text-xs">GÃ©rer les dossiers de primes</p>
-            </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-zinc-500" />
-        </button>
-
-        <button
-          onClick={() => navigate('/entreprise/equipes')}
-          className="w-full flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/30 hover:bg-zinc-800 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-400" />
-            </div>
-            <div className="text-left">
-              <p className="text-white font-medium text-sm">Mes Ã©quipes</p>
-              <p className="text-zinc-500 text-xs">Voir la performance des Ã©quipes</p>
-            </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-zinc-500" />
-        </button>
-      </div>
-    </div>
-  )
-}
