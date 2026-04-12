@@ -40,19 +40,19 @@ export default function EntrepriseDashboardPage() {
         />
         <StatCard
           icon={Users}
-          label="Ãquipes"
+          label="Équipes"
           value={stats?.nbEquipes || 0}
           variant="default"
         />
         <StatCard
           icon={Euro}
-          label="Primes estimÃ©es"
+          label="Primes estimées"
           value={formatCurrency(stats?.primeEstimee || 0)}
           variant="orange"
         />
         <StatCard
           icon={Euro}
-          label="Primes reÃ§ues"
+          label="Primes reçues"
           value={formatCurrency(stats?.primeRecue || 0)}
           variant="default"
         />
@@ -67,10 +67,10 @@ export default function EntrepriseDashboardPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white font-medium text-sm">
-                {chantiersSansDossier.length} chantier{chantiersSansDossier.length > 1 ? 's' : ''} validÃ©{chantiersSansDossier.length > 1 ? 's' : ''} sans dossier CEE
+                {chantiersSansDossier.length} chantier{chantiersSansDossier.length > 1 ? 's' : ''} validé{chantiersSansDossier.length > 1 ? 's' : ''} sans dossier CEE
               </p>
               <p className="text-zinc-400 text-xs mt-1">
-                CrÃ©ez un dossier pour rÃ©cupÃ©rer les primes
+                Créez un dossier pour récupérer les primes
               </p>
             </div>
             <Button
@@ -84,7 +84,7 @@ export default function EntrepriseDashboardPage() {
         </Card>
       )}
 
-      {/* RÃ©partition par statut */}
+      {/* Répartition par statut */}
       {stats?.totalDossiers > 0 && (
         <Card className="p-4">
           <h3 className="text-white font-semibold mb-3">Statuts des dossiers</h3>
@@ -105,11 +105,11 @@ export default function EntrepriseDashboardPage() {
         </Card>
       )}
 
-      {/* AccÃ¨s rapide */}
+      {/* Accès rapide */}
       <div className="space-y-2">
         <button
           onClick={() => navigate('/entreprise/dossiers')}
-          className="w-x-full flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/30 hover:bg-zinc-800 transition-colors"
+          className="w-full flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/30 hover:bg-zinc-800 transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
@@ -117,7 +117,7 @@ export default function EntrepriseDashboardPage() {
             </div>
             <div className="text-left">
               <p className="text-white font-medium text-sm">Dossiers CEE</p>
-              <p className="text-zinc-500 text-xs">GÃ©rer les dossiers de primes</p>
+              <p className="text-zinc-500 text-xs">Gérer les dossiers de primes</p>
             </div>
           </div>
           <ArrowRight className="w-5 h-5 text-zinc-500" />
@@ -132,8 +132,8 @@ export default function EntrepriseDashboardPage() {
               <Users className="w-5 h-5 text-blue-400" />
             </div>
             <div className="text-left">
-              <p className="text-white font-medium text-sm">Mes Ã©quipes</p>
-              <p className="text-zinc-500 text-xs">Voir la performance des Ã©quipes</p>
+              <p className="text-white font-medium text-sm">Mes équipes</p>
+              <p className="text-zinc-500 text-xs">Voir la performance des équipes</p>
             </div>
           </div>
           <ArrowRight className="w-5 h-5 text-zinc-500" />
@@ -142,4 +142,3 @@ export default function EntrepriseDashboardPage() {
     </div>
   )
 }
-
