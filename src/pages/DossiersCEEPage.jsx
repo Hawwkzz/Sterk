@@ -11,13 +11,13 @@ import toast from 'react-hot-toast'
 
 const FILTER_OPTIONS = [
   { value: '', label: 'Tous' },
-  { value: CEE_STATUTS.A_COMPLETER, label: 'Ã complÃ©ter' },
-  { value: CEE_STATUTS.PRET, label: 'PrÃªt' },
-  { value: CEE_STATUTS.ENVOYE, label: 'EnvoyÃ©' },
+  { value: CEE_STATUTS.A_COMPLETER, label: 'À compléter' },
+  { value: CEE_STATUTS.PRET, label: 'Prêt' },
+  { value: CEE_STATUTS.ENVOYE, label: 'Envoyé' },
   { value: CEE_STATUTS.EN_TRAITEMENT, label: 'En traitement' },
-  { value: CEE_STATUTS.VALIDE, label: 'ValidÃ©' },
-  { value: CEE_STATUTS.REFUSE, label: 'RefusÃ©' },
-  { value: CEE_STATUTS.PRIME_RECUE, label: 'Prime reÃ§ue' },
+  { value: CEE_STATUTS.VALIDE, label: 'Validé' },
+  { value: CEE_STATUTS.REFUSE, label: 'Refusé' },
+  { value: CEE_STATUTS.PRIME_RECUE, label: 'Prime reçue' },
 ]
 
 export default function DossiersCEEPage() {
@@ -58,14 +58,14 @@ export default function DossiersCEEPage() {
 
       if (error) throw error
 
-      toast.success('Dossier CEE crÃ©Ã©')
+      toast.success('Dossier CEE créé')
       setShowNewModal(false)
       refetch()
       refetchChantiers()
       navigate(`/entreprise/dossiers/${data.id}`)
     } catch (err) {
       console.error(err)
-      toast.error('Erreur lors de la crÃ©ation du dossier')
+      toast.error('Erreur lors de la création du dossier')
     }
   }
 
@@ -143,11 +143,11 @@ export default function DossiersCEEPage() {
         <EmptyState
           icon={FileCheck}
           title="Aucun dossier"
-          description={statutFilter ? 'Aucun dossier avec ce statut' : 'CrÃ©ez votre premier dossier CEE'}
+          description={statutFilter ? 'Aucun dossier avec ce statut' : 'Créez votre premier dossier CEE'}
           action={
             <Button size="sm" onClick={() => setShowNewModal(true)}>
               <FolderPlus className="w-4 h-4" />
-              CrÃ©er un dossier
+              Créer un dossier
             </Button>
           }
         />
@@ -196,9 +196,9 @@ export default function DossiersCEEPage() {
 
                   {dossier.montant_prime_estime && (
                     <div className="mt-2 pt-2 border-t border-zinc-700/30 flex items-center justify-between">
-                      <span className="text-zinc-500 text-xs">Prime estimÃ©e</span>
+                      <span className="text-zinc-500 text-xs">Prime estimée</span>
                       <span className="text-orange-400 font-medium text-sm">
-                        {parseFloat(dossier.montant_prime_estime).toLocaleString('fr-FR')} â¬
+                        {parseFloat(dossier.montant_prime_estime).toLocaleString('fr-FR')} €
                       </span>
                     </div>
                   )}
@@ -218,12 +218,12 @@ export default function DossiersCEEPage() {
             <EmptyState
               icon={FileCheck}
               title="Aucun chantier disponible"
-              description="Tous les chantiers validÃ©s ont dÃ©jÃ  un dossier CEE, ou il n'y a pas encore de chantier validÃ©."
+              description="Tous les chantiers validés ont déjà un dossier CEE, ou il n'y a pas encore de chantier validé."
             />
           ) : (
             <div className="space-y-2">
               <p className="text-zinc-400 text-sm mb-4">
-                SÃ©lectionnez un chantier validÃ© pour crÃ©er son dossier CEE :
+                Sélectionnez un chantier validé pour créer son dossier CEE :
               </p>
               {chantiersSansDossier.map(ch => (
                 <button
@@ -239,7 +239,7 @@ export default function DossiersCEEPage() {
                         <span className="text-zinc-600 text-xs">{ch.equipe?.name}</span>
                         {ch.date_intervention && (
                           <>
-                            <span className="text-zinc-700">â¢</span>
+                            <span className="text-zinc-700">•</span>
                             <span className="text-zinc-600 text-xs flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
                               {formatDate(ch.date_intervention)}
@@ -261,4 +261,3 @@ export default function DossiersCEEPage() {
     </div>
   )
 }
-
