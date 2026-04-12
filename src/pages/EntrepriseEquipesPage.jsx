@@ -18,21 +18,21 @@ export default function EntrepriseEquipesPage() {
       <div className="py-6">
         <EmptyState
           icon={Users}
-          title="Aucune Ã©quipe"
-          description="Aucune Ã©quipe n'est rattachÃ©e Ã  votre entreprise."
+          title="Aucune équipe"
+          description="Aucune équipe n'est rattachée à votre entreprise."
         />
       </div>
     )
   }
 
-  // Trier par chantiers validÃ©s dÃ©croissant
+  // Trier par chantiers validés décroissant
   const sorted = [...equipes].sort((a, b) => b.chantiersValides - a.chantiersValides)
 
   return (
     <div className="py-6 space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-white">Mes Ã©quipes</h1>
-        <p className="text-zinc-500 text-sm">{equipes.length} Ã©quipe{equipes.length > 1 ? 's' : ''}</p>
+        <h1 className="text-xl font-bold text-white">Mes équipes</h1>
+        <p className="text-zinc-500 text-sm">{equipes.length} équipe{equipes.length > 1 ? 's' : ''}</p>
       </div>
 
       <div className="space-y-2">
@@ -56,7 +56,7 @@ export default function EntrepriseEquipesPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-white font-medium text-sm truncate">{eq.name}</p>
-                  {eq.blocked && <Badge variant="danger">BloquÃ©e</Badge>}
+                  {eq.blocked && <Badge variant="danger">Bloquée</Badge>}
                 </div>
                 {eq.responsable && (
                   <p className="text-zinc-500 text-xs mt-0.5">{eq.responsable}</p>
@@ -83,4 +83,3 @@ export default function EntrepriseEquipesPage() {
     </div>
   )
 }
-
