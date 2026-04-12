@@ -48,7 +48,7 @@ export function useDossiersCEE(filters = {}) {
   return { dossiers, loading, error, refetch: fetch }
 }
 
-// Hook: un seul dossier CEE avec détails
+// Hook: un seul dossier CEE avec dÃ©tails
 export function useDossierCEE(dossierId) {
   const [dossier, setDossier] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -70,7 +70,7 @@ export function useDossierCEE(dossierId) {
             photos:chantier_photos(id, url, photo_type),
             documents:chantier_documents(id, url, filename, file_type)
           ),
-          documents:documents_cee(id, type_document, nom, url, valide, commentaire, created_at)
+          documents:documents_cee(id, type_document, nom, url, valide, commentaire, created_at, source, source_id)
         `)
         .eq('id', dossierId)
         .single()
@@ -101,13 +101,13 @@ export function useEntrepriseStats() {
 
     async function fetchStats() {
       try {
-        // Récupérer tous les dossiers CEE
+        // RÃ©cupÃ©rer tous les dossiers CEE
         const { data: dossiers } = await supabase
           .from('dossiers_cee')
           .select('statut, montant_prime_estime, montant_prime_recu')
           .eq('entreprise_id', entreprise.id)
 
-        // Récupérer les chantiers validés des équipes de l'entreprise
+        // RÃ©cupÃ©rer les chantiers validÃ©s des Ã©quipes de l'entreprise
         const { data: equipes } = await supabase
           .from('equipes')
           .select('id')
@@ -168,7 +168,7 @@ export function useEntrepriseStats() {
   return { stats, loading }
 }
 
-// Hook: équipes de l'entreprise avec leur performance
+// Hook: Ã©quipes de l'entreprise avec leur performance
 export function useEntrepriseEquipes() {
   const { entreprise } = useAuth()
   const [equipes, setEquipes] = useState([])
@@ -187,7 +187,7 @@ export function useEntrepriseEquipes() {
           `)
           .eq('entreprise_id', entreprise.id)
 
-        // Pour chaque équipe, compter les chantiers validés
+        // Pour chaque Ã©quipe, compter les chantiers validÃ©s
         const enriched = await Promise.all((equipesData || []).map(async (eq) => {
           const { count } = await supabase
             .from('chantiers')
@@ -212,7 +212,7 @@ export function useEntrepriseEquipes() {
   return { equipes, loading }
 }
 
-// Hook: chantiers validés sans dossier CEE (pour créer de nouveaux dossiers)
+// Hook: chantiers validÃ©s sans dossier CEE (pour crÃ©er de nouveaux dossiers)
 export function useChantiersSansDossier() {
   const { entreprise } = useAuth()
   const [chantiers, setChantiers] = useState([])
@@ -223,7 +223,7 @@ export function useChantiersSansDossier() {
     setLoading(true)
 
     try {
-      // Équipes de l'entreprise
+      // Ãquipes de l'entreprise
       const { data: equipes } = await supabase
         .from('equipes')
         .select('id')
@@ -232,7 +232,7 @@ export function useChantiersSansDossier() {
       const equipeIds = (equipes || []).map(e => e.id)
       if (equipeIds.length === 0) { setChantiers([]); setLoading(false); return }
 
-      // Chantiers validés
+      // Chantiers validÃ©s
       const { data: chantiersValides } = await supabase
         .from('chantiers')
         .select('id, adresse, unit_count, client_name, date_intervention, equipe:equipes(id, name)')
