@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, FileCheck, CheckCircle2, Circle, Upload, MapPin, User, Phone, Mail,
-  Calendar, Building2, Send, XCircle, Euro, FileText, Trash2, ChevronDown
+  Calendar, Building2, Send, XCircle, Euro, FileText, Trash2, ChevronDown,
+  Download, Image, FileUp, Eye, Camera, File, Link2, AlertCircle
 } from 'lucide-react'
 import { useDossierCEE } from '../hooks/useEntreprise'
 import { useAuth } from '../contexts/AuthContext'
@@ -10,6 +11,7 @@ import { supabase } from '../lib/supabase'
 import { Card, Badge, Button, Spinner, Modal, Input, Textarea } from '../components/ui'
 import { CEE_STATUT_CONFIG, CEE_STATUTS, CEE_DOCUMENT_TYPES, DELEGATAIRES } from '../lib/constants'
 import { formatDate, formatCurrency } from '../lib/utils'
+import { generateDossierCEEPDF, downloadPDF } from '../lib/pdf'
 import toast from 'react-hot-toast'
 
 const STATUT_FLOW = [
@@ -30,8 +32,13 @@ export default function DossierCEEDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showAddDocModal, setShowAddDocModal] = useState(false)
   const [editForm, setEditForm] = useState({})
-  const [docForm, setDocForm] = useState({ type_document: 'ATTESTATION_HONNEUR', nom: '' })
+  const [docForm, setDocForm] = useState({ type_document: 'ATTESTATION_HONNEUR', nom: '', file: null })
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [importing, setImporting] = useState(null)
+  const [downloadingPDF, setDownloadingPDF] = useState(false)
+  const [activeTab, setActiveTab] = useState('documents') // 'documents' | 'equipe'
+  const fileInputRef = useRef(null)
 
   if (loading) {
     return (
@@ -56,6 +63,15 @@ export default function DossierCEEDetailPage() {
   const documents = dossier.documents || []
   const config = CEE_STATUT_CONFIG[dossier.statut] || {}
 
+  // Photos et documents de l'Ã©quipe (provenant du chantier)
+  const equipePhotos = chantier?.photos || []
+  const equipeDocuments = chantier?.documents || []
+  const photosBefore = equipePhotos.filter(p => p.photo_type === 'before')
+  const photosAfter = equipePhotos.filter(p => p.photo_type === 'after' || !p.photo_type)
+
+  // IDs dÃ©jÃ  importÃ©s dans le dossier CEE
+  const importedSourceIds = new Set(documents.filter(d => d.source_id).map(d => d.source_id))
+
   // Progression dans le flow
   const currentStep = STATUT_FLOW.indexOf(dossier.statut)
 
@@ -71,8 +87,11 @@ export default function DossierCEEDetailPage() {
   })
 
   const allRequiredPresent = requiredTypes.every(type => docsParType[type]?.length > 0)
+  const totalDocs = documents.length
+  const validDocs = documents.filter(d => d.valide).length
 
-  // Actions
+  // ===== ACTIONS =====
+
   async function updateStatut(newStatut, extra = {}) {
     setSaving(true)
     try {
@@ -82,7 +101,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', dossier.id)
 
       if (error) throw error
-      toast.success('Statut mis à jour')
+      toast.success('Statut mis Ã  jour')
       refetch()
     } catch (err) {
       toast.error('Erreur: ' + err.message)
@@ -107,7 +126,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', dossier.id)
 
       if (error) throw error
-      toast.success('Dossier mis à jour')
+      toast.success('Dossier mis Ã  jour')
       setShowEditModal(false)
       refetch()
     } catch (err) {
@@ -117,31 +136,182 @@ export default function DossierCEEDetailPage() {
     }
   }
 
+  // Upload de fichier + crÃ©ation du document CEE
   async function addDocument() {
     if (!docForm.nom.trim()) {
       toast.error('Nom du document requis')
       return
     }
+
     setSaving(true)
+    setUploading(true)
     try {
+      let fileUrl = null
+
+      // Upload du fichier si prÃ©sent
+      if (docForm.file) {
+        const fileExt = docForm.file.name.split('.').pop()
+        const filePath = `${dossier.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('documents-cee')
+          .upload(filePath, docForm.file, {
+            cacheControl: '3600',
+            upsert: false,
+          })
+
+        if (uploadError) throw uploadError
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('documents-cee')
+          .getPublicUrl(filePath)
+
+        fileUrl = publicUrl
+      }
+
       const { error } = await supabase
         .from('documents_cee')
         .insert({
           dossier_id: dossier.id,
           type_document: docForm.type_document,
           nom: docForm.nom.trim(),
+          url: fileUrl,
           valide: false,
+          source: 'manual',
         })
 
       if (error) throw error
-      toast.success('Document ajouté')
+      toast.success('Document ajoutÃ© avec succÃ¨s')
       setShowAddDocModal(false)
-      setDocForm({ type_document: 'ATTESTATION_HONNEUR', nom: '' })
+      setDocForm({ type_document: 'ATTESTATION_HONNEUR', nom: '', file: null })
+      if (fileInputRef.current) fileInputRef.current.value = ''
       refetch()
     } catch (err) {
       toast.error('Erreur: ' + err.message)
     } finally {
       setSaving(false)
+      setUploading(false)
+    }
+  }
+
+  // Importer une photo de l'Ã©quipe dans le dossier CEE
+  async function importEquipePhoto(photo) {
+    setImporting(photo.id)
+    try {
+      const typeDoc = photo.photo_type === 'before' ? 'PHOTO_AVANT' : 'PHOTO_APRES'
+      const label = photo.photo_type === 'before' ? 'Photo avant' : 'Photo aprÃ¨s'
+
+      const { error } = await supabase
+        .from('documents_cee')
+        .insert({
+          dossier_id: dossier.id,
+          type_document: typeDoc,
+          nom: `${label} â ${chantier.client_name}`,
+          url: photo.url,
+          valide: false,
+          source: 'equipe_photo',
+          source_id: photo.id,
+        })
+
+      if (error) throw error
+      toast.success(`${label} importÃ©e dans le dossier`)
+      refetch()
+    } catch (err) {
+      toast.error('Erreur: ' + err.message)
+    } finally {
+      setImporting(null)
+    }
+  }
+
+  // Importer un document de l'Ã©quipe
+  async function importEquipeDocument(doc) {
+    setImporting(doc.id)
+    try {
+      const { error } = await supabase
+        .from('documents_cee')
+        .insert({
+          dossier_id: dossier.id,
+          type_document: 'AUTRE',
+          nom: doc.filename || 'Document Ã©quipe',
+          url: doc.url,
+          valide: false,
+          source: 'equipe_document',
+          source_id: doc.id,
+        })
+
+      if (error) throw error
+      toast.success('Document importÃ© dans le dossier')
+      refetch()
+    } catch (err) {
+      toast.error('Erreur: ' + err.message)
+    } finally {
+      setImporting(null)
+    }
+  }
+
+  // Importer toutes les photos et documents de l'Ã©quipe d'un coup
+  async function importAllEquipe() {
+    setImporting('all')
+    try {
+      const inserts = []
+
+      // Photos avant
+      for (const photo of photosBefore) {
+        if (importedSourceIds.has(photo.id)) continue
+        inserts.push({
+          dossier_id: dossier.id,
+          type_document: 'PHOTO_AVANT',
+          nom: `Photo avant â ${chantier.client_name}`,
+          url: photo.url,
+          valide: false,
+          source: 'equipe_photo',
+          source_id: photo.id,
+        })
+      }
+
+      // Photos aprÃ¨s
+      for (const photo of photosAfter) {
+        if (importedSourceIds.has(photo.id)) continue
+        inserts.push({
+          dossier_id: dossier.id,
+          type_document: 'PHOTO_APRES',
+          nom: `Photo aprÃ¨s â ${chantier.client_name}`,
+          url: photo.url,
+          valide: false,
+          source: 'equipe_photo',
+          source_id: photo.id,
+        })
+      }
+
+      // Documents
+      for (const doc of equipeDocuments) {
+        if (importedSourceIds.has(doc.id)) continue
+        inserts.push({
+          dossier_id: dossier.id,
+          type_document: 'AUTRE',
+          nom: doc.filename || 'Document Ã©quipe',
+          url: doc.url,
+          valide: false,
+          source: 'equipe_document',
+          source_id: doc.id,
+        })
+      }
+
+      if (inserts.length === 0) {
+        toast('Tout est dÃ©jÃ  importÃ©', { icon: 'â' })
+        setImporting(null)
+        return
+      }
+
+      const { error } = await supabase.from('documents_cee').insert(inserts)
+      if (error) throw error
+
+      toast.success(`${inserts.length} Ã©lÃ©ment(s) importÃ©(s)`)
+      refetch()
+    } catch (err) {
+      toast.error('Erreur: ' + err.message)
+    } finally {
+      setImporting(null)
     }
   }
 
@@ -167,7 +337,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', docId)
 
       if (error) throw error
-      toast.success('Document supprimé')
+      toast.success('Document retirÃ©')
       refetch()
     } catch (err) {
       toast.error('Erreur')
@@ -185,6 +355,25 @@ export default function DossierCEEDetailPage() {
     setShowEditModal(true)
   }
 
+  // TÃ©lÃ©charger le dossier CEE complet en PDF
+  async function handleDownloadPDF() {
+    setDownloadingPDF(true)
+    try {
+      toast.loading('GÃ©nÃ©ration du rapport CEE...', { id: 'cee-pdf' })
+      const doc = await generateDossierCEEPDF(dossier, entreprise)
+      downloadPDF(doc, `dossier-cee-${chantier?.client_name || dossier.id.slice(0, 8)}.pdf`)
+      toast.success('Rapport CEE tÃ©lÃ©chargÃ©', { id: 'cee-pdf' })
+    } catch (err) {
+      console.error('PDF error:', err)
+      toast.error('Erreur lors de la gÃ©nÃ©ration du PDF', { id: 'cee-pdf' })
+    } finally {
+      setDownloadingPDF(false)
+    }
+  }
+
+  const hasEquipeContent = equipePhotos.length > 0 || equipeDocuments.length > 0
+  const notImportedCount = [...equipePhotos, ...equipeDocuments].filter(item => !importedSourceIds.has(item.id)).length
+
   return (
     <div className="py-6 space-y-4">
       {/* Header */}
@@ -198,7 +387,7 @@ export default function DossierCEEDetailPage() {
         <div className="flex-1">
           <h1 className="text-lg font-bold text-white">Dossier CEE</h1>
           <p className="text-zinc-500 text-xs">
-            {chantier?.client_name} — {chantier?.equipe?.name}
+            {chantier?.client_name} â {chantier?.equipe?.name}
           </p>
         </div>
       </div>
@@ -215,7 +404,7 @@ export default function DossierCEEDetailPage() {
             {config.label || dossier.statut}
           </Badge>
           {dossier.reference_externe && (
-            <span className="text-zinc-500 text-xs">Réf: {dossier.reference_externe}</span>
+            <span className="text-zinc-500 text-xs">RÃ©f: {dossier.reference_externe}</span>
           )}
         </div>
 
@@ -241,7 +430,7 @@ export default function DossierCEEDetailPage() {
 
       {/* Infos chantier */}
       <Card className="p-4">
-        <h3 className="text-white font-semibold text-sm mb-3">Chantier associé</h3>
+        <h3 className="text-white font-semibold text-sm mb-3">Chantier associÃ©</h3>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-zinc-400">
             <User className="w-4 h-4 text-zinc-500" />
@@ -271,7 +460,7 @@ export default function DossierCEEDetailPage() {
           )}
           <div className="flex items-center gap-2 text-zinc-400">
             <Building2 className="w-4 h-4 text-zinc-500" />
-            <span>{chantier?.equipe?.name} — {chantier?.unit_count} unités</span>
+            <span>{chantier?.equipe?.name} â {chantier?.unit_count} unitÃ©s</span>
           </div>
         </div>
       </Card>
@@ -284,23 +473,23 @@ export default function DossierCEEDetailPage() {
         </div>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-zinc-500">Délégataire</span>
-            <span className="text-white">{dossier.delegataire || '—'}</span>
+            <span className="text-zinc-500">DÃ©lÃ©gataire</span>
+            <span className="text-white">{dossier.delegataire || 'â'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">Référence</span>
-            <span className="text-white">{dossier.reference_externe || '—'}</span>
+            <span className="text-zinc-500">RÃ©fÃ©rence</span>
+            <span className="text-white">{dossier.reference_externe || 'â'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">Prime estimée</span>
+            <span className="text-zinc-500">Prime estimÃ©e</span>
             <span className="text-orange-400 font-medium">
-              {dossier.montant_prime_estime ? formatCurrency(dossier.montant_prime_estime) : '—'}
+              {dossier.montant_prime_estime ? formatCurrency(dossier.montant_prime_estime) : 'â'}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">Prime reçue</span>
+            <span className="text-zinc-500">Prime reÃ§ue</span>
             <span className="text-emerald-400 font-medium">
-              {dossier.montant_prime_recu ? formatCurrency(dossier.montant_prime_recu) : '—'}
+              {dossier.montant_prime_recu ? formatCurrency(dossier.montant_prime_recu) : 'â'}
             </span>
           </div>
           {dossier.commentaire && (
@@ -311,72 +500,332 @@ export default function DossierCEEDetailPage() {
         </div>
       </Card>
 
-      {/* Checklist documents */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-white font-semibold text-sm">
-            Documents ({documents.filter(d => d.valide).length}/{documents.length})
-          </h3>
-          <Button size="sm" variant="ghost" onClick={() => setShowAddDocModal(true)}>
-            <Plus className="w-3 h-3" /> Ajouter
-          </Button>
-        </div>
+      {/* === ONGLETS: Documents CEE / Contenu Ãquipe === */}
+      <div className="flex gap-1 bg-zinc-800/50 rounded-xl p-1">
+        <button
+          onClick={() => setActiveTab('documents')}
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors ${
+            activeTab === 'documents'
+              ? 'bg-orange-500 text-white'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          Documents CEE ({validDocs}/{totalDocs})
+        </button>
+        <button
+          onClick={() => setActiveTab('equipe')}
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors relative ${
+            activeTab === 'equipe'
+              ? 'bg-orange-500 text-white'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          Contenu Ã©quipe
+          {notImportedCount > 0 && activeTab !== 'equipe' && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold">
+              {notImportedCount}
+            </span>
+          )}
+        </button>
+      </div>
 
-        {/* Documents requis */}
-        <div className="space-y-1.5">
-          {Object.entries(CEE_DOCUMENT_TYPES).map(([type, typeCfg]) => {
-            const docs = docsParType[type] || []
-            const hasDoc = docs.length > 0
-            const allValide = docs.length > 0 && docs.every(d => d.valide)
+      {/* === TAB: Documents CEE (checklist) === */}
+      {activeTab === 'documents' && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">
+              Documents ({validDocs}/{totalDocs})
+            </h3>
+            <Button size="sm" variant="ghost" onClick={() => setShowAddDocModal(true)}>
+              <PlusIcon className="w-3 h-3" /> Ajouter
+            </Button>
+          </div>
 
-            return (
-              <div key={type}>
-                <div className="flex items-center gap-2 py-1.5">
-                  {allValide ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  ) : (
-                    <Circle className={`w-4 h-4 flex-shrink-0 ${typeCfg.required ? 'text-amber-500' : 'text-zinc-600'}`} />
-                  )}
-                  <span className={`text-xs flex-1 ${allValide ? 'text-emerald-400' : hasDoc ? 'text-white' : typeCfg.required ? 'text-zinc-300' : 'text-zinc-600'}`}>
-                    {typeCfg.label}
-                    {typeCfg.required && !hasDoc && <span className="text-red-400 ml-1">*</span>}
-                  </span>
-                </div>
-
-                {/* Sous-documents uploadés */}
-                {docs.map(doc => (
-                  <div key={doc.id} className="ml-6 flex items-center gap-2 py-1 text-xs">
-                    <button
-                      onClick={() => toggleDocValide(doc)}
-                      className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                        doc.valide ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-600 hover:border-zinc-400'
-                      }`}
-                    >
-                      {doc.valide && <CheckCircle2 className="w-3 h-3 text-white" />}
-                    </button>
-                    <span className={doc.valide ? 'text-zinc-300' : 'text-zinc-500'}>{doc.nom}</span>
-                    <button onClick={() => deleteDocument(doc.id)} className="ml-auto text-zinc-600 hover:text-red-400">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+          {/* Barre de complÃ©tude */}
+          {totalDocs > 0 && (
+            <div className="mb-4">
+              <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    validDocs === totalDocs ? 'bg-emerald-500' : 'bg-orange-500'
+                  }`}
+                  style={{ width: `${(validDocs / totalDocs) * 100}%` }}
+                />
               </div>
-            )
-          })}
+              <p className="text-zinc-500 text-[10px] mt-1">
+                {validDocs === totalDocs ? 'Tous les documents sont validÃ©s' : `${totalDocs - validDocs} document(s) Ã  valider`}
+              </p>
+            </div>
+          )}
+
+          {/* Documents requis */}
+          <div className="space-y-1.5">
+            {Object.entries(CEE_DOCUMENT_TYPES).map(([type, typeCfg]) => {
+              const docs = docsParType[type] || []
+              const hasDoc = docs.length > 0
+              const allValide = docs.length > 0 && docs.every(d => d.valide)
+
+              return (
+                <div key={type}>
+                  <div className="flex items-center gap-2 py-1.5">
+                    {allValide ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    ) : (
+                      <Circle className={`w-4 h-4 flex-shrink-0 ${typeCfg.required ? 'text-amber-500' : 'text-zinc-600'}`} />
+                    )}
+                    <span className={`text-xs flex-1 ${allValide ? 'text-emerald-400' : hasDoc ? 'text-white' : typeCfg.required ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                      {typeCfg.label}
+                      {typeCfg.required && !hasDoc && <span className="text-red-400 ml-1">*</span>}
+                    </span>
+                  </div>
+
+                  {/* Sous-documents */}
+                  {docs.map(doc => (
+                    <div key={doc.id} className="ml-6 flex items-center gap-2 py-1.5 text-xs group">
+                      <button
+                        onClick={() => toggleDocValide(doc)}
+                        className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                          doc.valide ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-600 hover:border-zinc-400'
+                        }`}
+                      >
+                        {doc.valide && <CheckCircle2 className="w-3 h-3 text-white" />}
+                      </button>
+                      <span className={`flex-1 truncate ${doc.valide ? 'text-zinc-300' : 'text-zinc-500'}`}>{doc.nom}</span>
+
+                      {/* Source badge */}
+                      {doc.source === 'equipe_photo' && (
+                        <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full">Ã©quipe</span>
+                      )}
+                      {doc.source === 'equipe_document' && (
+                        <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full">Ã©quipe</span>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {doc.url && (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-zinc-500 hover:text-orange-400"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <Eye className="w-3 h-3" />
+                          </a>
+                        )}
+                        <button onClick={() => deleteDocument(doc.id)} className="text-zinc-600 hover:text-red-400">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* === TAB: Contenu Ãquipe (photos + documents du chantier) === */}
+      {activeTab === 'equipe' && (
+        <div className="space-y-4">
+          {!hasEquipeContent ? (
+            <Card className="p-6 text-center">
+              <Camera className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+              <p className="text-zinc-400 text-sm">Aucune photo ou document uploadÃ© par l'Ã©quipe</p>
+              <p className="text-zinc-600 text-xs mt-1">L'Ã©quipe doit uploader des photos et rapports depuis son interface</p>
+            </Card>
+          ) : (
+            <>
+              {/* Bouton importer tout */}
+              {notImportedCount > 0 && (
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  size="sm"
+                  onClick={importAllEquipe}
+                  loading={importing === 'all'}
+                >
+                  <Download className="w-4 h-4" />
+                  Tout importer dans le dossier CEE ({notImportedCount} Ã©lÃ©ment{notImportedCount > 1 ? 's' : ''})
+                </Button>
+              )}
+
+              {/* Photos AVANT */}
+              {photosBefore.length > 0 && (
+                <Card className="p-4">
+                  <h4 className="text-white font-semibold text-xs mb-3 flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-amber-400" />
+                    Photos AVANT ({photosBefore.length})
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {photosBefore.map(photo => {
+                      const isImported = importedSourceIds.has(photo.id)
+                      return (
+                        <div key={photo.id} className="relative group">
+                          <img
+                            src={photo.url}
+                            alt="Photo avant"
+                            className={`w-full aspect-square object-cover rounded-lg ${isImported ? 'opacity-50' : ''}`}
+                          />
+                          {isImported ? (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded-full font-medium">
+                                ImportÃ©e
+                              </span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => importEquipePhoto(photo)}
+                              disabled={importing === photo.id}
+                              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
+                            >
+                              {importing === photo.id ? (
+                                <Spinner size="sm" />
+                              ) : (
+                                <span className="bg-orange-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                                  <Download className="w-3 h-3" /> Importer
+                                </span>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </Card>
+              )}
+
+              {/* Photos APRÃS */}
+              {photosAfter.length > 0 && (
+                <Card className="p-4">
+                  <h4 className="text-white font-semibold text-xs mb-3 flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-emerald-400" />
+                    Photos APRÃS ({photosAfter.length})
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {photosAfter.map(photo => {
+                      const isImported = importedSourceIds.has(photo.id)
+                      return (
+                        <div key={photo.id} className="relative group">
+                          <img
+                            src={photo.url}
+                            alt="Photo aprÃ¨s"
+                            className={`w-full aspect-square object-cover rounded-lg ${isImported ? 'opacity-50' : ''}`}
+                          />
+                          {isImported ? (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded-full font-medium">
+                                ImportÃ©e
+                              </span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => importEquipePhoto(photo)}
+                              disabled={importing === photo.id}
+                              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
+                            >
+                              {importing === photo.id ? (
+                                <Spinner size="sm" />
+                              ) : (
+                                <span className="bg-orange-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                                  <Download className="w-3 h-3" /> Importer
+                                </span>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </Card>
+              )}
+
+              {/* Documents Ã©quipe */}
+              {equipeDocuments.length > 0 && (
+                <Card className="p-4">
+                  <h4 className="text-white font-semibold text-xs mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-400" />
+                    Rapports Ã©quipe ({equipeDocuments.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {equipeDocuments.map(doc => {
+                      const isImported = importedSourceIds.has(doc.id)
+                      return (
+                        <div
+                          key={doc.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                            isImported
+                              ? 'bg-emerald-500/5 border-emerald-500/20'
+                              : 'bg-zinc-800 border-zinc-700/30 hover:border-orange-500/30'
+                          }`}
+                        >
+                          <File className={`w-5 h-5 flex-shrink-0 ${isImported ? 'text-emerald-400' : 'text-blue-400'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white truncate">{doc.filename || 'Document'}</p>
+                            <p className="text-[10px] text-zinc-500">{doc.file_type || 'fichier'}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-zinc-500 hover:text-white"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </a>
+                            {isImported ? (
+                              <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">ImportÃ©</span>
+                            ) : (
+                              <button
+                                onClick={() => importEquipeDocument(doc)}
+                                disabled={importing === doc.id}
+                                className="text-xs text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+                              >
+                                {importing === doc.id ? <Spinner size="sm" /> : <><Download className="w-3 h-3" /> Importer</>}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </Card>
+              )}
+            </>
+          )}
         </div>
+      )}
+
+      {/* === TÃLÃCHARGEMENT DOSSIER COMPLET === */}
+      <Card className="p-4">
+        <Button
+          className="w-full"
+          variant="secondary"
+          onClick={handleDownloadPDF}
+          loading={downloadingPDF}
+        >
+          <Download className="w-4 h-4" />
+          TÃ©lÃ©charger le rapport CEE complet (PDF)
+        </Button>
+        {totalDocs > 0 && documents.some(d => d.url) && (
+          <p className="text-zinc-600 text-[10px] text-center mt-2">
+            Inclut les infos chantier + {documents.filter(d => d.url).length} piÃ¨ce(s) jointe(s)
+          </p>
+        )}
       </Card>
 
-      {/* Actions */}
+      {/* Actions de statut */}
       <div className="space-y-2 pb-4">
         {dossier.statut === CEE_STATUTS.A_COMPLETER && allRequiredPresent && (
           <Button className="w-full" onClick={() => updateStatut(CEE_STATUTS.PRET)} loading={saving}>
-            Marquer comme prêt à envoyer
+            Marquer comme prÃªt Ã  envoyer
           </Button>
         )}
 
         {dossier.statut === CEE_STATUTS.PRET && (
           <Button className="w-full" onClick={() => updateStatut(CEE_STATUTS.ENVOYE, { date_envoi: new Date().toISOString().split('T')[0] })} loading={saving}>
-            <Send className="w-4 h-4" /> Marquer comme envoyé
+            <Send className="w-4 h-4" /> Marquer comme envoyÃ©
           </Button>
         )}
 
@@ -389,17 +838,17 @@ export default function DossierCEEDetailPage() {
         {dossier.statut === CEE_STATUTS.EN_TRAITEMENT && (
           <div className="flex gap-2">
             <Button className="flex-1" onClick={() => updateStatut(CEE_STATUTS.VALIDE, { date_validation: new Date().toISOString().split('T')[0] })} loading={saving}>
-              <CheckCircle2 className="w-4 h-4" /> Validé
+              <CheckCircle2 className="w-4 h-4" /> ValidÃ©
             </Button>
             <Button className="flex-1" variant="danger" onClick={() => updateStatut(CEE_STATUTS.REFUSE)} loading={saving}>
-              <XCircle className="w-4 h-4" /> Refusé
+              <XCircle className="w-4 h-4" /> RefusÃ©
             </Button>
           </div>
         )}
 
         {dossier.statut === CEE_STATUTS.VALIDE && (
           <Button className="w-full" onClick={() => {
-            const montant = prompt('Montant de la prime reçue (€) :')
+            const montant = prompt('Montant de la prime reÃ§ue (â¬) :')
             if (montant) {
               updateStatut(CEE_STATUTS.PRIME_RECUE, {
                 montant_prime_recu: parseFloat(montant),
@@ -407,46 +856,46 @@ export default function DossierCEEDetailPage() {
               })
             }
           }} loading={saving}>
-            <Euro className="w-4 h-4" /> Prime reçue
+            <Euro className="w-4 h-4" /> Prime reÃ§ue
           </Button>
         )}
 
         {dossier.statut === CEE_STATUTS.REFUSE && (
           <Button className="w-full" variant="secondary" onClick={() => updateStatut(CEE_STATUTS.A_COMPLETER)} loading={saving}>
-            Remettre à compléter
+            Remettre Ã  complÃ©ter
           </Button>
         )}
       </div>
 
-      {/* Modal édition */}
+      {/* Modal Ã©dition */}
       <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Modifier le dossier">
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-zinc-400 text-sm block mb-2">Délégataire</label>
+            <label className="text-zinc-400 text-sm block mb-2">DÃ©lÃ©gataire</label>
             <select
               value={editForm.delegataire || ''}
               onChange={e => setEditForm({ ...editForm, delegataire: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-orange-500"
             >
-              <option value="">Sélectionner...</option>
+              <option value="">SÃ©lectionner...</option>
               {DELEGATAIRES.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <Input
-            label="Référence externe"
+            label="RÃ©fÃ©rence externe"
             value={editForm.reference_externe || ''}
             onChange={e => setEditForm({ ...editForm, reference_externe: e.target.value })}
-            placeholder="N° dossier chez le délégataire"
+            placeholder="NÂ° dossier chez le dÃ©lÃ©gataire"
           />
           <Input
-            label="Prime estimée (€)"
+            label="Prime estimÃ©e (â¬)"
             type="number"
             value={editForm.montant_prime_estime || ''}
             onChange={e => setEditForm({ ...editForm, montant_prime_estime: e.target.value })}
             placeholder="0.00"
           />
           <Input
-            label="Prime reçue (€)"
+            label="Prime reÃ§ue (â¬)"
             type="number"
             value={editForm.montant_prime_recu || ''}
             onChange={e => setEditForm({ ...editForm, montant_prime_recu: e.target.value })}
@@ -464,7 +913,7 @@ export default function DossierCEEDetailPage() {
         </div>
       </Modal>
 
-      {/* Modal ajout document */}
+      {/* Modal ajout document â AVEC UPLOAD FICHIER */}
       <Modal open={showAddDocModal} onClose={() => setShowAddDocModal(false)} title="Ajouter un document">
         <div className="p-6 space-y-4">
           <div>
@@ -485,8 +934,64 @@ export default function DossierCEEDetailPage() {
             onChange={e => setDocForm({ ...docForm, nom: e.target.value })}
             placeholder="Ex: Attestation M. Dupont"
           />
-          <Button className="w-full" onClick={addDocument} loading={saving}>
-            Ajouter
+
+          {/* UPLOAD FICHIER */}
+          <div>
+            <label className="text-zinc-400 text-sm block mb-2">Fichier (PDF, JPG, PNG)</label>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-full border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                docForm.file
+                  ? 'border-orange-500/50 bg-orange-500/5'
+                  : 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/50'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setDocForm({
+                      ...docForm,
+                      file,
+                      nom: docForm.nom || file.name.replace(/\.[^/.]+$/, ''),
+                    })
+                  }
+                }}
+              />
+              {docForm.file ? (
+                <div className="flex items-center justify-center gap-2">
+                  <FileCheck className="w-5 h-5 text-orange-400" />
+                  <div className="text-left">
+                    <p className="text-white text-sm font-medium">{docForm.file.name}</p>
+                    <p className="text-zinc-500 text-xs">{(docForm.file.size / 1024 / 1024).toFixed(2)} Mo</p>
+                  </div>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      setDocForm({ ...docForm, file: null })
+                      if (fileInputRef.current) fileInputRef.current.value = ''
+                    }}
+                    className="ml-2 text-zinc-500 hover:text-red-400"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
+                  <p className="text-zinc-400 text-sm">Cliquer pour sÃ©lectionner un fichier</p>
+                  <p className="text-zinc-600 text-xs mt-1">PDF, JPG, PNG, DOCX â max 50 Mo</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          <Button className="w-full" onClick={addDocument} loading={saving || uploading}>
+            {uploading ? 'Upload en cours...' : 'Ajouter le document'}
           </Button>
         </div>
       </Modal>
@@ -494,7 +999,7 @@ export default function DossierCEEDetailPage() {
   )
 }
 
-function Plus({ className }) {
+function PlusIcon({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
