@@ -82,7 +82,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', dossier.id)
 
       if (error) throw error
-      toast.success('Statut mis Ã  jour')
+      toast.success('Statut mis à jour')
       refetch()
     } catch (err) {
       toast.error('Erreur: ' + err.message)
@@ -107,7 +107,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', dossier.id)
 
       if (error) throw error
-      toast.success('Dossier mis Ã  jour')
+      toast.success('Dossier mis à jour')
       setShowEditModal(false)
       refetch()
     } catch (err) {
@@ -134,7 +134,7 @@ export default function DossierCEEDetailPage() {
         })
 
       if (error) throw error
-      toast.success('Document ajoutÃ©')
+      toast.success('Document ajouté')
       setShowAddDocModal(false)
       setDocForm({ type_document: 'ATTESTATION_HONNEUR', nom: '' })
       refetch()
@@ -167,7 +167,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', docId)
 
       if (error) throw error
-      toast.success('Document supprimÃ©')
+      toast.success('Document supprimé')
       refetch()
     } catch (err) {
       toast.error('Erreur')
@@ -198,7 +198,7 @@ export default function DossierCEEDetailPage() {
         <div className="flex-1">
           <h1 className="text-lg font-bold text-white">Dossier CEE</h1>
           <p className="text-zinc-500 text-xs">
-            {chantier?.client_name} â {chantier?.equipe?.name}
+            {chantier?.client_name} — {chantier?.equipe?.name}
           </p>
         </div>
       </div>
@@ -215,7 +215,7 @@ export default function DossierCEEDetailPage() {
             {config.label || dossier.statut}
           </Badge>
           {dossier.reference_externe && (
-            <span className="text-zinc-500 text-xs">RÃ©f: {dossier.reference_externe}</span>
+            <span className="text-zinc-500 text-xs">Réf: {dossier.reference_externe}</span>
           )}
         </div>
 
@@ -241,7 +241,7 @@ export default function DossierCEEDetailPage() {
 
       {/* Infos chantier */}
       <Card className="p-4">
-        <h3 className="text-white font-semibold text-sm mb-3">Chantier associÃ©</h3>
+        <h3 className="text-white font-semibold text-sm mb-3">Chantier associé</h3>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-zinc-400">
             <User className="w-4 h-4 text-zinc-500" />
@@ -271,7 +271,7 @@ export default function DossierCEEDetailPage() {
           )}
           <div className="flex items-center gap-2 text-zinc-400">
             <Building2 className="w-4 h-4 text-zinc-500" />
-            <span>{chantier?.equipe?.name} â {chantier?.unit_count} unitÃ©s</span>
+            <span>{chantier?.equipe?.name} — {chantier?.unit_count} unités</span>
           </div>
         </div>
       </Card>
@@ -284,23 +284,23 @@ export default function DossierCEEDetailPage() {
         </div>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-zinc-500">DÃ©lÃ©gataire</span>
-            <span className="text-white">{dossier.delegataire || 'â'}</span>
+            <span className="text-zinc-500">Délégataire</span>
+            <span className="text-white">{dossier.delegataire || '—'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">RÃ©fÃ©rence</span>
-            <span className="text-white">{dossier.reference_externe || 'â'}</span>
+            <span className="text-zinc-500">Référence</span>
+            <span className="text-white">{dossier.reference_externe || '—'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">Prime estimÃ©e</span>
+            <span className="text-zinc-500">Prime estimée</span>
             <span className="text-orange-400 font-medium">
-              {dossier.montant_prime_estime ? formatCurrency(dossier.montant_prime_estime) : 'â'}
+              {dossier.montant_prime_estime ? formatCurrency(dossier.montant_prime_estime) : '—'}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">Prime reÃ§ue</span>
+            <span className="text-zinc-500">Prime reçue</span>
             <span className="text-emerald-400 font-medium">
-              {dossier.montant_prime_recu ? formatCurrency(dossier.montant_prime_recu) : 'â'}
+              {dossier.montant_prime_recu ? formatCurrency(dossier.montant_prime_recu) : '—'}
             </span>
           </div>
           {dossier.commentaire && (
@@ -343,7 +343,7 @@ export default function DossierCEEDetailPage() {
                   </span>
                 </div>
 
-                {/* Sous-documents uploadÃ©s */}
+                {/* Sous-documents uploadés */}
                 {docs.map(doc => (
                   <div key={doc.id} className="ml-6 flex items-center gap-2 py-1 text-xs">
                     <button
@@ -370,13 +370,13 @@ export default function DossierCEEDetailPage() {
       <div className="space-y-2 pb-4">
         {dossier.statut === CEE_STATUTS.A_COMPLETER && allRequiredPresent && (
           <Button className="w-full" onClick={() => updateStatut(CEE_STATUTS.PRET)} loading={saving}>
-            Marquer comme prÃªt Ã  envoyer
+            Marquer comme prêt à envoyer
           </Button>
         )}
 
         {dossier.statut === CEE_STATUTS.PRET && (
           <Button className="w-full" onClick={() => updateStatut(CEE_STATUTS.ENVOYE, { date_envoi: new Date().toISOString().split('T')[0] })} loading={saving}>
-            <Send className="w-4 h-4" /> Marquer comme envoyÃ©
+            <Send className="w-4 h-4" /> Marquer comme envoyé
           </Button>
         )}
 
@@ -389,17 +389,17 @@ export default function DossierCEEDetailPage() {
         {dossier.statut === CEE_STATUTS.EN_TRAITEMENT && (
           <div className="flex gap-2">
             <Button className="flex-1" onClick={() => updateStatut(CEE_STATUTS.VALIDE, { date_validation: new Date().toISOString().split('T')[0] })} loading={saving}>
-              <CheckCircle2 className="w-4 h-4" /> ValidÃ©
+              <CheckCircle2 className="w-4 h-4" /> Validé
             </Button>
             <Button className="flex-1" variant="danger" onClick={() => updateStatut(CEE_STATUTS.REFUSE)} loading={saving}>
-              <XCircle className="w-4 h-4" /> RefusÃ©
+              <XCircle className="w-4 h-4" /> Refusé
             </Button>
           </div>
         )}
 
         {dossier.statut === CEE_STATUTS.VALIDE && (
           <Button className="w-full" onClick={() => {
-            const montant = prompt('Montant de la prime reÃ§ue (â¬) :')
+            const montant = prompt('Montant de la prime reçue (€) :')
             if (montant) {
               updateStatut(CEE_STATUTS.PRIME_RECUE, {
                 montant_prime_recu: parseFloat(montant),
@@ -407,46 +407,46 @@ export default function DossierCEEDetailPage() {
               })
             }
           }} loading={saving}>
-            <Euro className="w-4 h-4" /> Prime reÃ§ue
+            <Euro className="w-4 h-4" /> Prime reçue
           </Button>
         )}
 
         {dossier.statut === CEE_STATUTS.REFUSE && (
           <Button className="w-full" variant="secondary" onClick={() => updateStatut(CEE_STATUTS.A_COMPLETER)} loading={saving}>
-            Remettre Ã  complÃ©ter
+            Remettre à compléter
           </Button>
         )}
       </div>
 
-      {/* Modal Ã©dition */}
+      {/* Modal édition */}
       <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Modifier le dossier">
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-zinc-400 text-sm block mb-2">DÃ©lÃ©gataire</label>
+            <label className="text-zinc-400 text-sm block mb-2">Délégataire</label>
             <select
               value={editForm.delegataire || ''}
               onChange={e => setEditForm({ ...editForm, delegataire: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-orange-500"
             >
-              <option value="">SÃ©lectionner...</option>
+              <option value="">Sélectionner...</option>
               {DELEGATAIRES.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <Input
-            label="RÃ©fÃ©rence externe"
+            label="Référence externe"
             value={editForm.reference_externe || ''}
             onChange={e => setEditForm({ ...editForm, reference_externe: e.target.value })}
-            placeholder="NÂ° dossier chez le dÃ©lÃ©gataire"
+            placeholder="N° dossier chez le délégataire"
           />
           <Input
-            label="Prime estimÃ©e (â¬)"
+            label="Prime estimée (€)"
             type="number"
             value={editForm.montant_prime_estime || ''}
             onChange={e => setEditForm({ ...editForm, montant_prime_estime: e.target.value })}
             placeholder="0.00"
           />
           <Input
-            label="Prime reÃ§ue (â¬)"
+            label="Prime reçue (€)"
             type="number"
             value={editForm.montant_prime_recu || ''}
             onChange={e => setEditForm({ ...editForm, montant_prime_recu: e.target.value })}
@@ -501,4 +501,3 @@ function Plus({ className }) {
     </svg>
   )
 }
-
