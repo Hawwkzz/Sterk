@@ -206,3 +206,41 @@ export default function EntrepriseDashboardPage() {
           </div>
         </Card>
       )}
+
+      {/* Accès rapide */}
+      <div className="space-y-2">
+        <button
+          onClick={() => navigate('/entreprise/dossiers')}
+          className="w-full flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/30 hover:bg-zinc-800 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+              <FileCheck className="w-5 h-5 text-orange-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-medium text-sm">Dossiers CEE</p>
+              <p className="text-zinc-500 text-xs">Gérer les dossiers de primes</p>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-zinc-500" />
+        </button>
+
+        <button
+          onClick={() => navigate('/entreprise/equipes')}
+          className="w-full flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/30 hover:bg-zinc-800 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <Users className="w-5 h-5 text-blue-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-medium text-sm">Mes équipes</p>
+              <p className="text-zinc-500 text-xs">Voir la performance des équipes</p>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-zinc-500" />
+        </button>
+      </div>
+    </div>
+  )
+}
