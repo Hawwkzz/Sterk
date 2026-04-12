@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [equipe, setEquipe] = useState(null)
+  const [entreprise, setEntreprise] = useState(null)
   const [secteur, setSecteur] = useState(SECTEUR_DEFAUT)
   const [loading, setLoading] = useState(true)
   const retryCount = useRef(0)
@@ -29,6 +30,7 @@ export function AuthProvider({ children }) {
         } else {
           setProfile(null)
           setEquipe(null)
+          setEntreprise(null)
           setSecteur(SECTEUR_DEFAUT)
           setLoading(false)
         }
@@ -91,6 +93,7 @@ export function AuthProvider({ children }) {
       if (profileError) throw profileError
       setProfile(profileData)
 
+      // Si rôle équipe → charger équipe + secteur
       if (profileData.equipe_id) {
         const { data: equipeData, error: equipeError } = await withTimeout(
           supabase
@@ -121,6 +124,22 @@ export function AuthProvider({ children }) {
           }
         }
       }
+
+      // Si rôle entreprise → charger entreprise
+      if (profileData.entreprise_id) {
+        const { data: entrepriseData, error: entrepriseError } = await withTimeout(
+          supabase
+            .from('entreprises')
+            .select('*')
+            .eq('id', profileData.entreprise_id)
+            .single(),
+          10000
+        )
+
+        if (!entrepriseError && entrepriseData) {
+          setEntreprise(entrepriseData)
+        }
+      }
     } catch (error) {
       console.error('[Auth] Error fetching profile:', error)
     } finally {
@@ -142,6 +161,7 @@ export function AuthProvider({ children }) {
       setUser(null)
       setProfile(null)
       setEquipe(null)
+      setEntreprise(null)
       setSecteur(SECTEUR_DEFAUT)
     }
     return { error }
@@ -163,15 +183,18 @@ export function AuthProvider({ children }) {
 
   const isAdmin = profile?.role === 'admin'
   const isEquipe = profile?.role === 'equipe'
+  const isEntreprise = profile?.role === 'entreprise'
 
   const value = {
     user,
     profile,
     equipe,
-    secteur,        // config complète du secteur (unit_label, quota_mensuel, prime_par_unite, …)
+    entreprise,
+    secteur, // config complète du secteur (unit_label, quota_mensuel, prime_par_unite, …)
     loading,
     isAdmin,
     isEquipe,
+    isEntreprise,
     signIn,
     signOut,
     resetPassword,
@@ -183,6 +206,7 @@ export function AuthProvider({ children }) {
 }
 
 // ---- Helpers ----
+
 function withTimeout(promise, ms) {
   return Promise.race([
     promise,
@@ -190,4 +214,4 @@ function withTimeout(promise, ms) {
       setTimeout(() => reject(new Error(`Timeout après ${ms / 1000}s`)), ms)
     )
   ])
-      }
+}
