@@ -76,7 +76,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-black text-white tracking-tight">
             EOIA<span className="text-orange-500">.</span>Energie
           </h1>
-          <p className="text-zinc-500 mt-2">Suivi de production LED</p>
+          <p className="text-zinc-500 mt-2">Gestion de chantiers énergétiques</p>
         </div>
 
         {/* Form */}
