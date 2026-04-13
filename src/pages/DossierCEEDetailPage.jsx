@@ -63,13 +63,13 @@ export default function DossierCEEDetailPage() {
   const documents = dossier.documents || []
   const config = CEE_STATUT_CONFIG[dossier.statut] || {}
 
-  // Photos et documents de l'Ã©quipe (provenant du chantier)
+  // Photos et documents de l'équipe (provenant du chantier)
   const equipePhotos = chantier?.photos || []
   const equipeDocuments = chantier?.documents || []
   const photosBefore = equipePhotos.filter(p => p.photo_type === 'before')
   const photosAfter = equipePhotos.filter(p => p.photo_type === 'after' || !p.photo_type)
 
-  // IDs dÃ©jÃ  importÃ©s dans le dossier CEE
+  // IDs déjà importés dans le dossier CEE
   const importedSourceIds = new Set(documents.filter(d => d.source_id).map(d => d.source_id))
 
   // Progression dans le flow
@@ -101,7 +101,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', dossier.id)
 
       if (error) throw error
-      toast.success('Statut mis Ã  jour')
+      toast.success('Statut mis à jour')
       refetch()
     } catch (err) {
       toast.error('Erreur: ' + err.message)
@@ -126,7 +126,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', dossier.id)
 
       if (error) throw error
-      toast.success('Dossier mis Ã  jour')
+      toast.success('Dossier mis à jour')
       setShowEditModal(false)
       refetch()
     } catch (err) {
@@ -136,7 +136,7 @@ export default function DossierCEEDetailPage() {
     }
   }
 
-  // Upload de fichier + crÃ©ation du document CEE
+  // Upload de fichier + création du document CEE
   async function addDocument() {
     if (!docForm.nom.trim()) {
       toast.error('Nom du document requis')
@@ -148,7 +148,7 @@ export default function DossierCEEDetailPage() {
     try {
       let fileUrl = null
 
-      // Upload du fichier si prÃ©sent
+      // Upload du fichier si présent
       if (docForm.file) {
         const fileExt = docForm.file.name.split('.').pop()
         const filePath = `${dossier.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
@@ -181,7 +181,7 @@ export default function DossierCEEDetailPage() {
         })
 
       if (error) throw error
-      toast.success('Document ajoutÃ© avec succÃ¨s')
+      toast.success('Document ajouté avec succès')
       setShowAddDocModal(false)
       setDocForm({ type_document: 'ATTESTATION_HONNEUR', nom: '', file: null })
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -194,19 +194,19 @@ export default function DossierCEEDetailPage() {
     }
   }
 
-  // Importer une photo de l'Ã©quipe dans le dossier CEE
+  // Importer une photo de l'équipe dans le dossier CEE
   async function importEquipePhoto(photo) {
     setImporting(photo.id)
     try {
       const typeDoc = photo.photo_type === 'before' ? 'PHOTO_AVANT' : 'PHOTO_APRES'
-      const label = photo.photo_type === 'before' ? 'Photo avant' : 'Photo aprÃ¨s'
+      const label = photo.photo_type === 'before' ? 'Photo avant' : 'Photo après'
 
       const { error } = await supabase
         .from('documents_cee')
         .insert({
           dossier_id: dossier.id,
           type_document: typeDoc,
-          nom: `${label} â ${chantier.client_name}`,
+          nom: `${label} — ${chantier.client_name}`,
           url: photo.url,
           valide: false,
           source: 'equipe_photo',
@@ -214,7 +214,7 @@ export default function DossierCEEDetailPage() {
         })
 
       if (error) throw error
-      toast.success(`${label} importÃ©e dans le dossier`)
+      toast.success(`${label} importée dans le dossier`)
       refetch()
     } catch (err) {
       toast.error('Erreur: ' + err.message)
@@ -223,7 +223,7 @@ export default function DossierCEEDetailPage() {
     }
   }
 
-  // Importer un document de l'Ã©quipe
+  // Importer un document de l'équipe
   async function importEquipeDocument(doc) {
     setImporting(doc.id)
     try {
@@ -232,7 +232,7 @@ export default function DossierCEEDetailPage() {
         .insert({
           dossier_id: dossier.id,
           type_document: 'AUTRE',
-          nom: doc.filename || 'Document Ã©quipe',
+          nom: doc.filename || 'Document équipe',
           url: doc.url,
           valide: false,
           source: 'equipe_document',
@@ -240,7 +240,7 @@ export default function DossierCEEDetailPage() {
         })
 
       if (error) throw error
-      toast.success('Document importÃ© dans le dossier')
+      toast.success('Document importé dans le dossier')
       refetch()
     } catch (err) {
       toast.error('Erreur: ' + err.message)
@@ -249,7 +249,7 @@ export default function DossierCEEDetailPage() {
     }
   }
 
-  // Importer toutes les photos et documents de l'Ã©quipe d'un coup
+  // Importer toutes les photos et documents de l'équipe d'un coup
   async function importAllEquipe() {
     setImporting('all')
     try {
@@ -261,7 +261,7 @@ export default function DossierCEEDetailPage() {
         inserts.push({
           dossier_id: dossier.id,
           type_document: 'PHOTO_AVANT',
-          nom: `Photo avant â ${chantier.client_name}`,
+          nom: `Photo avant — ${chantier.client_name}`,
           url: photo.url,
           valide: false,
           source: 'equipe_photo',
@@ -269,13 +269,13 @@ export default function DossierCEEDetailPage() {
         })
       }
 
-      // Photos aprÃ¨s
+      // Photos après
       for (const photo of photosAfter) {
         if (importedSourceIds.has(photo.id)) continue
         inserts.push({
           dossier_id: dossier.id,
           type_document: 'PHOTO_APRES',
-          nom: `Photo aprÃ¨s â ${chantier.client_name}`,
+          nom: `Photo après — ${chantier.client_name}`,
           url: photo.url,
           valide: false,
           source: 'equipe_photo',
@@ -289,7 +289,7 @@ export default function DossierCEEDetailPage() {
         inserts.push({
           dossier_id: dossier.id,
           type_document: 'AUTRE',
-          nom: doc.filename || 'Document Ã©quipe',
+          nom: doc.filename || 'Document équipe',
           url: doc.url,
           valide: false,
           source: 'equipe_document',
@@ -298,7 +298,7 @@ export default function DossierCEEDetailPage() {
       }
 
       if (inserts.length === 0) {
-        toast('Tout est dÃ©jÃ  importÃ©', { icon: 'â' })
+        toast('Tout est déjà importé', { icon: '✓' })
         setImporting(null)
         return
       }
@@ -306,7 +306,7 @@ export default function DossierCEEDetailPage() {
       const { error } = await supabase.from('documents_cee').insert(inserts)
       if (error) throw error
 
-      toast.success(`${inserts.length} Ã©lÃ©ment(s) importÃ©(s)`)
+      toast.success(`${inserts.length} élément(s) importé(s)`)
       refetch()
     } catch (err) {
       toast.error('Erreur: ' + err.message)
@@ -337,7 +337,7 @@ export default function DossierCEEDetailPage() {
         .eq('id', docId)
 
       if (error) throw error
-      toast.success('Document retirÃ©')
+      toast.success('Document retiré')
       refetch()
     } catch (err) {
       toast.error('Erreur')
@@ -355,17 +355,17 @@ export default function DossierCEEDetailPage() {
     setShowEditModal(true)
   }
 
-  // TÃ©lÃ©charger le dossier CEE complet en PDF
+  // Télécharger le dossier CEE complet en PDF
   async function handleDownloadPDF() {
     setDownloadingPDF(true)
     try {
-      toast.loading('GÃ©nÃ©ration du rapport CEE...', { id: 'cee-pdf' })
+      toast.loading('Génération du rapport CEE...', { id: 'cee-pdf' })
       const doc = await generateDossierCEEPDF(dossier, entreprise)
       downloadPDF(doc, `dossier-cee-${chantier?.client_name || dossier.id.slice(0, 8)}.pdf`)
-      toast.success('Rapport CEE tÃ©lÃ©chargÃ©', { id: 'cee-pdf' })
+      toast.success('Rapport CEE téléchargé', { id: 'cee-pdf' })
     } catch (err) {
       console.error('PDF error:', err)
-      toast.error('Erreur lors de la gÃ©nÃ©ration du PDF', { id: 'cee-pdf' })
+      toast.error('Erreur lors de la génération du PDF', { id: 'cee-pdf' })
     } finally {
       setDownloadingPDF(false)
     }
@@ -387,7 +387,7 @@ export default function DossierCEEDetailPage() {
         <div className="flex-1">
           <h1 className="text-lg font-bold text-white">Dossier CEE</h1>
           <p className="text-zinc-500 text-xs">
-            {chantier?.client_name} â {chantier?.equipe?.name}
+            {chantier?.client_name} — {chantier?.equipe?.name}
           </p>
         </div>
       </div>
@@ -404,7 +404,7 @@ export default function DossierCEEDetailPage() {
             {config.label || dossier.statut}
           </Badge>
           {dossier.reference_externe && (
-            <span className="text-zinc-500 text-xs">RÃ©f: {dossier.reference_externe}</span>
+            <span className="text-zinc-500 text-xs">Réf: {dossier.reference_externe}</span>
           )}
         </div>
 
@@ -430,7 +430,7 @@ export default function DossierCEEDetailPage() {
 
       {/* Infos chantier */}
       <Card className="p-4">
-        <h3 className="text-white font-semibold text-sm mb-3">Chantier associÃ©</h3>
+        <h3 className="text-white font-semibold text-sm mb-3">Chantier associé</h3>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-zinc-400">
             <User className="w-4 h-4 text-zinc-500" />
@@ -460,7 +460,7 @@ export default function DossierCEEDetailPage() {
           )}
           <div className="flex items-center gap-2 text-zinc-400">
             <Building2 className="w-4 h-4 text-zinc-500" />
-            <span>{chantier?.equipe?.name} â {chantier?.unit_count} unitÃ©s</span>
+            <span>{chantier?.equipe?.name} — {chantier?.unit_count} unités</span>
           </div>
         </div>
       </Card>
@@ -473,23 +473,23 @@ export default function DossierCEEDetailPage() {
         </div>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-zinc-500">DÃ©lÃ©gataire</span>
-            <span className="text-white">{dossier.delegataire || 'â'}</span>
+            <span className="text-zinc-500">Délégataire</span>
+            <span className="text-white">{dossier.delegataire || '—'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">RÃ©fÃ©rence</span>
-            <span className="text-white">{dossier.reference_externe || 'â'}</span>
+            <span className="text-zinc-500">Référence</span>
+            <span className="text-white">{dossier.reference_externe || '—'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">Prime estimÃ©e</span>
+            <span className="text-zinc-500">Prime estimée</span>
             <span className="text-orange-400 font-medium">
-              {dossier.montant_prime_estime ? formatCurrency(dossier.montant_prime_estime) : 'â'}
+              {dossier.montant_prime_estime ? formatCurrency(dossier.montant_prime_estime) : '—'}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">Prime reÃ§ue</span>
+            <span className="text-zinc-500">Prime reçue</span>
             <span className="text-emerald-400 font-medium">
-              {dossier.montant_prime_recu ? formatCurrency(dossier.montant_prime_recu) : 'â'}
+              {dossier.montant_prime_recu ? formatCurrency(dossier.montant_prime_recu) : '—'}
             </span>
           </div>
           {dossier.commentaire && (
@@ -500,7 +500,7 @@ export default function DossierCEEDetailPage() {
         </div>
       </Card>
 
-      {/* === ONGLETS: Documents CEE / Contenu Ãquipe === */}
+      {/* === ONGLETS: Documents CEE / Contenu Équipe === */}
       <div className="flex gap-1 bg-zinc-800/50 rounded-xl p-1">
         <button
           onClick={() => setActiveTab('documents')}
@@ -520,7 +520,7 @@ export default function DossierCEEDetailPage() {
               : 'text-zinc-400 hover:text-white'
           }`}
         >
-          Contenu Ã©quipe
+          Contenu équipe
           {notImportedCount > 0 && activeTab !== 'equipe' && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold">
               {notImportedCount}
@@ -541,7 +541,7 @@ export default function DossierCEEDetailPage() {
             </Button>
           </div>
 
-          {/* Barre de complÃ©tude */}
+          {/* Barre de complétude */}
           {totalDocs > 0 && (
             <div className="mb-4">
               <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
@@ -553,7 +553,7 @@ export default function DossierCEEDetailPage() {
                 />
               </div>
               <p className="text-zinc-500 text-[10px] mt-1">
-                {validDocs === totalDocs ? 'Tous les documents sont validÃ©s' : `${totalDocs - validDocs} document(s) Ã  valider`}
+                {validDocs === totalDocs ? 'Tous les documents sont validés' : `${totalDocs - validDocs} document(s) à valider`}
               </p>
             </div>
           )}
@@ -594,10 +594,10 @@ export default function DossierCEEDetailPage() {
 
                       {/* Source badge */}
                       {doc.source === 'equipe_photo' && (
-                        <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full">Ã©quipe</span>
+                        <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full">équipe</span>
                       )}
                       {doc.source === 'equipe_document' && (
-                        <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full">Ã©quipe</span>
+                        <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full">équipe</span>
                       )}
 
                       {/* Actions */}
@@ -626,14 +626,14 @@ export default function DossierCEEDetailPage() {
         </Card>
       )}
 
-      {/* === TAB: Contenu Ãquipe (photos + documents du chantier) === */}
+      {/* === TAB: Contenu Équipe (photos + documents du chantier) === */}
       {activeTab === 'equipe' && (
         <div className="space-y-4">
           {!hasEquipeContent ? (
             <Card className="p-6 text-center">
               <Camera className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-              <p className="text-zinc-400 text-sm">Aucune photo ou document uploadÃ© par l'Ã©quipe</p>
-              <p className="text-zinc-600 text-xs mt-1">L'Ã©quipe doit uploader des photos et rapports depuis son interface</p>
+              <p className="text-zinc-400 text-sm">Aucune photo ou document uploadé par l'équipe</p>
+              <p className="text-zinc-600 text-xs mt-1">L'équipe doit uploader des photos et rapports depuis son interface</p>
             </Card>
           ) : (
             <>
@@ -647,7 +647,7 @@ export default function DossierCEEDetailPage() {
                   loading={importing === 'all'}
                 >
                   <Download className="w-4 h-4" />
-                  Tout importer dans le dossier CEE ({notImportedCount} Ã©lÃ©ment{notImportedCount > 1 ? 's' : ''})
+                  Tout importer dans le dossier CEE ({notImportedCount} élément{notImportedCount > 1 ? 's' : ''})
                 </Button>
               )}
 
@@ -671,7 +671,7 @@ export default function DossierCEEDetailPage() {
                           {isImported ? (
                             <div className="absolute inset-0 flex items-center justify-center">
                               <span className="bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded-full font-medium">
-                                ImportÃ©e
+                                Importée
                               </span>
                             </div>
                           ) : (
@@ -696,12 +696,12 @@ export default function DossierCEEDetailPage() {
                 </Card>
               )}
 
-              {/* Photos APRÃS */}
+              {/* Photos APRÈS */}
               {photosAfter.length > 0 && (
                 <Card className="p-4">
                   <h4 className="text-white font-semibold text-xs mb-3 flex items-center gap-2">
                     <Camera className="w-4 h-4 text-emerald-400" />
-                    Photos APRÃS ({photosAfter.length})
+                    Photos APRÈS ({photosAfter.length})
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {photosAfter.map(photo => {
@@ -710,13 +710,13 @@ export default function DossierCEEDetailPage() {
                         <div key={photo.id} className="relative group">
                           <img
                             src={photo.url}
-                            alt="Photo aprÃ¨s"
+                            alt="Photo après"
                             className={`w-full aspect-square object-cover rounded-lg ${isImported ? 'opacity-50' : ''}`}
                           />
                           {isImported ? (
                             <div className="absolute inset-0 flex items-center justify-center">
                               <span className="bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded-full font-medium">
-                                ImportÃ©e
+                                Importée
                               </span>
                             </div>
                           ) : (
@@ -741,12 +741,12 @@ export default function DossierCEEDetailPage() {
                 </Card>
               )}
 
-              {/* Documents Ã©quipe */}
+              {/* Documents équipe */}
               {equipeDocuments.length > 0 && (
                 <Card className="p-4">
                   <h4 className="text-white font-semibold text-xs mb-3 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-400" />
-                    Rapports Ã©quipe ({equipeDocuments.length})
+                    Rapports équipe ({equipeDocuments.length})
                   </h4>
                   <div className="space-y-2">
                     {equipeDocuments.map(doc => {
@@ -775,7 +775,7 @@ export default function DossierCEEDetailPage() {
                               <Eye className="w-4 h-4" />
                             </a>
                             {isImported ? (
-                              <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">ImportÃ©</span>
+                              <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">Importé</span>
                             ) : (
                               <button
                                 onClick={() => importEquipeDocument(doc)}
@@ -797,7 +797,7 @@ export default function DossierCEEDetailPage() {
         </div>
       )}
 
-      {/* === TÃLÃCHARGEMENT DOSSIER COMPLET === */}
+      {/* === TÉLÉCHARGEMENT DOSSIER COMPLET === */}
       <Card className="p-4">
         <Button
           className="w-full"
@@ -806,11 +806,11 @@ export default function DossierCEEDetailPage() {
           loading={downloadingPDF}
         >
           <Download className="w-4 h-4" />
-          TÃ©lÃ©charger le rapport CEE complet (PDF)
+          Télécharger le rapport CEE complet (PDF)
         </Button>
         {totalDocs > 0 && documents.some(d => d.url) && (
           <p className="text-zinc-600 text-[10px] text-center mt-2">
-            Inclut les infos chantier + {documents.filter(d => d.url).length} piÃ¨ce(s) jointe(s)
+            Inclut les infos chantier + {documents.filter(d => d.url).length} pièce(s) jointe(s)
           </p>
         )}
       </Card>
@@ -819,13 +819,13 @@ export default function DossierCEEDetailPage() {
       <div className="space-y-2 pb-4">
         {dossier.statut === CEE_STATUTS.A_COMPLETER && allRequiredPresent && (
           <Button className="w-full" onClick={() => updateStatut(CEE_STATUTS.PRET)} loading={saving}>
-            Marquer comme prÃªt Ã  envoyer
+            Marquer comme prêt à envoyer
           </Button>
         )}
 
         {dossier.statut === CEE_STATUTS.PRET && (
           <Button className="w-full" onClick={() => updateStatut(CEE_STATUTS.ENVOYE, { date_envoi: new Date().toISOString().split('T')[0] })} loading={saving}>
-            <Send className="w-4 h-4" /> Marquer comme envoyÃ©
+            <Send className="w-4 h-4" /> Marquer comme envoyé
           </Button>
         )}
 
@@ -838,17 +838,17 @@ export default function DossierCEEDetailPage() {
         {dossier.statut === CEE_STATUTS.EN_TRAITEMENT && (
           <div className="flex gap-2">
             <Button className="flex-1" onClick={() => updateStatut(CEE_STATUTS.VALIDE, { date_validation: new Date().toISOString().split('T')[0] })} loading={saving}>
-              <CheckCircle2 className="w-4 h-4" /> ValidÃ©
+              <CheckCircle2 className="w-4 h-4" /> Validé
             </Button>
             <Button className="flex-1" variant="danger" onClick={() => updateStatut(CEE_STATUTS.REFUSE)} loading={saving}>
-              <XCircle className="w-4 h-4" /> RefusÃ©
+              <XCircle className="w-4 h-4" /> Refusé
             </Button>
           </div>
         )}
 
         {dossier.statut === CEE_STATUTS.VALIDE && (
           <Button className="w-full" onClick={() => {
-            const montant = prompt('Montant de la prime reÃ§ue (â¬) :')
+            const montant = prompt('Montant de la prime reçue (€) :')
             if (montant) {
               updateStatut(CEE_STATUTS.PRIME_RECUE, {
                 montant_prime_recu: parseFloat(montant),
@@ -856,46 +856,46 @@ export default function DossierCEEDetailPage() {
               })
             }
           }} loading={saving}>
-            <Euro className="w-4 h-4" /> Prime reÃ§ue
+            <Euro className="w-4 h-4" /> Prime reçue
           </Button>
         )}
 
         {dossier.statut === CEE_STATUTS.REFUSE && (
           <Button className="w-full" variant="secondary" onClick={() => updateStatut(CEE_STATUTS.A_COMPLETER)} loading={saving}>
-            Remettre Ã  complÃ©ter
+            Remettre à compléter
           </Button>
         )}
       </div>
 
-      {/* Modal Ã©dition */}
+      {/* Modal édition */}
       <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Modifier le dossier">
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-zinc-400 text-sm block mb-2">DÃ©lÃ©gataire</label>
+            <label className="text-zinc-400 text-sm block mb-2">Délégataire</label>
             <select
               value={editForm.delegataire || ''}
               onChange={e => setEditForm({ ...editForm, delegataire: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-orange-500"
             >
-              <option value="">SÃ©lectionner...</option>
+              <option value="">Sélectionner...</option>
               {DELEGATAIRES.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <Input
-            label="RÃ©fÃ©rence externe"
+            label="Référence externe"
             value={editForm.reference_externe || ''}
             onChange={e => setEditForm({ ...editForm, reference_externe: e.target.value })}
-            placeholder="NÂ° dossier chez le dÃ©lÃ©gataire"
+            placeholder="N° dossier chez le délégataire"
           />
           <Input
-            label="Prime estimÃ©e (â¬)"
+            label="Prime estimée (€)"
             type="number"
             value={editForm.montant_prime_estime || ''}
             onChange={e => setEditForm({ ...editForm, montant_prime_estime: e.target.value })}
             placeholder="0.00"
           />
           <Input
-            label="Prime reÃ§ue (â¬)"
+            label="Prime reçue (€)"
             type="number"
             value={editForm.montant_prime_recu || ''}
             onChange={e => setEditForm({ ...editForm, montant_prime_recu: e.target.value })}
@@ -913,7 +913,7 @@ export default function DossierCEEDetailPage() {
         </div>
       </Modal>
 
-      {/* Modal ajout document â AVEC UPLOAD FICHIER */}
+      {/* Modal ajout document — AVEC UPLOAD FICHIER */}
       <Modal open={showAddDocModal} onClose={() => setShowAddDocModal(false)} title="Ajouter un document">
         <div className="p-6 space-y-4">
           <div>
@@ -983,8 +983,8 @@ export default function DossierCEEDetailPage() {
               ) : (
                 <>
                   <Upload className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
-                  <p className="text-zinc-400 text-sm">Cliquer pour sÃ©lectionner un fichier</p>
-                  <p className="text-zinc-600 text-xs mt-1">PDF, JPG, PNG, DOCX â max 50 Mo</p>
+                  <p className="text-zinc-400 text-sm">Cliquer pour sélectionner un fichier</p>
+                  <p className="text-zinc-600 text-xs mt-1">PDF, JPG, PNG, DOCX — max 50 Mo</p>
                 </>
               )}
             </div>
