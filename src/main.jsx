@@ -1,25 +1,3 @@
-// ============================================
-// NETTOYAGE AGRESSIF : supprimer tous les service workers et caches
-// ============================================
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    registrations.forEach(registration => {
-      registration.unregister()
-      console.log('[SW] Unregistered service worker')
-    })
-  })
-}
-
-// Vider tous les caches du service worker
-if ('caches' in window) {
-  caches.keys().then(names => {
-    names.forEach(name => {
-      caches.delete(name)
-      console.log('[Cache] Deleted cache:', name)
-    })
-  })
-}
-
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -28,6 +6,15 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import InstallPrompt from './components/InstallPrompt'
 import './index.css'
+
+// Nettoyage service worker — une seule fois, pas à chaque chargement
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(registration => {
+      registration.unregister()
+    })
+  })
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
