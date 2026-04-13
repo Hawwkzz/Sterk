@@ -33,7 +33,7 @@ function loadImage(url) {
 
 /**
  * Calcule les dimensions d'une image pour qu'elle rentre dans une zone
- * SANS Ãªtre coupÃ©e (fit, pas fill)
+ * SANS être coupée (fit, pas fill)
  */
 function fitImage(imgWidth, imgHeight, maxWidth, maxHeight) {
   const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight)
@@ -44,7 +44,7 @@ function fitImage(imgWidth, imgHeight, maxWidth, maxHeight) {
 }
 
 /**
- * VÃ©rifie si on a assez de place, sinon ajoute une page
+ * Vérifie si on a assez de place, sinon ajoute une page
  */
 function checkPageBreak(doc, yPos, needed) {
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -62,7 +62,7 @@ export async function generateChantierPDF(chantier, equipe) {
   const contentWidth = pageWidth - margin * 2
 
   // =============================================
-  // EN-TÃTE
+  // EN-TÊTE
   // =============================================
   doc.setFillColor(249, 115, 22)
   doc.rect(0, 0, pageWidth, 40, 'F')
@@ -77,18 +77,18 @@ export async function generateChantierPDF(chantier, equipe) {
   doc.text("Rapport d'intervention LED", margin, 30)
 
   doc.setFontSize(10)
-  doc.text(`Rapport NÂ° ${chantier.id?.slice(0, 8) || '---'}`, pageWidth - margin, 20, { align: 'right' })
+  doc.text(`Rapport N° ${chantier.id?.slice(0, 8) || '---'}`, pageWidth - margin, 20, { align: 'right' })
   doc.text(formatDateTime(new Date()), pageWidth - margin, 28, { align: 'right' })
 
   let yPos = 55
 
   // =============================================
-  // SECTION ÃQUIPE
+  // SECTION ÉQUIPE
   // =============================================
   doc.setTextColor(249, 115, 22)
   doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
-  doc.text('ÃQUIPE', margin, yPos)
+  doc.text('ÉQUIPE', margin, yPos)
   yPos += 2
   doc.setDrawColor(249, 115, 22)
   doc.setLineWidth(0.5)
@@ -98,9 +98,9 @@ export async function generateChantierPDF(chantier, equipe) {
   doc.setTextColor(60, 60, 60)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text(`Nom : ${equipe?.name || 'Non spÃ©cifiÃ©'}`, margin, yPos)
+  doc.text(`Nom : ${equipe?.name || 'Non spécifié'}`, margin, yPos)
   yPos += 6
-  doc.text(`Responsable : ${equipe?.responsable || 'Non spÃ©cifiÃ©'}`, margin, yPos)
+  doc.text(`Responsable : ${equipe?.responsable || 'Non spécifié'}`, margin, yPos)
   yPos += 14
 
   // =============================================
@@ -124,7 +124,7 @@ export async function generateChantierPDF(chantier, equipe) {
     yPos += 6
   }
   if (chantier.client_phone) {
-    doc.text(`TÃ©lÃ©phone : ${chantier.client_phone}`, margin, yPos)
+    doc.text(`Téléphone : ${chantier.client_phone}`, margin, yPos)
     yPos += 6
   }
   yPos += 10
@@ -135,7 +135,7 @@ export async function generateChantierPDF(chantier, equipe) {
   doc.setTextColor(249, 115, 22)
   doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
-  doc.text('DÃTAILS DU CHANTIER', margin, yPos)
+  doc.text('DÉTAILS DU CHANTIER', margin, yPos)
   yPos += 2
   doc.line(margin, yPos, margin + 70, yPos)
   yPos += 7
@@ -156,7 +156,7 @@ export async function generateChantierPDF(chantier, equipe) {
   doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(234, 88, 12)
-  doc.text(`${chantier.led_count} LED installÃ©es`, pageWidth / 2, yPos + 14, { align: 'center' })
+  doc.text(`${chantier.led_count} LED installées`, pageWidth / 2, yPos + 14, { align: 'center' })
 
   doc.setTextColor(60, 60, 60)
   yPos += 32
@@ -222,7 +222,7 @@ export async function generateChantierPDF(chantier, equipe) {
     doc.setTextColor(249, 115, 22)
     doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    doc.text('ð·  PHOTOS AVANT INTERVENTION', margin, yPos)
+    doc.text('📷  PHOTOS AVANT INTERVENTION', margin, yPos)
     yPos += 3
     doc.setLineWidth(0.8)
     doc.line(margin, yPos, pageWidth - margin, yPos)
@@ -232,7 +232,7 @@ export async function generateChantierPDF(chantier, equipe) {
       const imgData = await loadImage(photosBefore[i].url)
       if (!imgData) continue
 
-      // Taille max par photo : largeur complÃ¨te, hauteur max 90mm
+      // Taille max par photo : largeur complète, hauteur max 90mm
       const maxW = contentWidth
       const maxH = 90
       const { width, height } = fitImage(imgData.width, imgData.height, maxW, maxH)
@@ -244,17 +244,17 @@ export async function generateChantierPDF(chantier, equipe) {
       doc.addImage(imgData.dataUrl, 'JPEG', xOffset, yPos, width, height)
       yPos += height + 4
 
-      // LÃ©gende
+      // Légende
       doc.setTextColor(120, 120, 120)
       doc.setFontSize(8)
       doc.setFont('helvetica', 'italic')
-      doc.text(`Photo avant nÂ°${i + 1}`, pageWidth / 2, yPos, { align: 'center' })
+      doc.text(`Photo avant n°${i + 1}`, pageWidth / 2, yPos, { align: 'center' })
       yPos += 10
     }
   }
 
   // =============================================
-  // PHOTOS APRÃS
+  // PHOTOS APRÈS
   // =============================================
   if (photosAfter.length > 0) {
     doc.addPage()
@@ -263,7 +263,7 @@ export async function generateChantierPDF(chantier, equipe) {
     doc.setTextColor(249, 115, 22)
     doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    doc.text('ð·  PHOTOS APRÃS INTERVENTION', margin, yPos)
+    doc.text('📷  PHOTOS APRÈS INTERVENTION', margin, yPos)
     yPos += 3
     doc.setLineWidth(0.8)
     doc.line(margin, yPos, pageWidth - margin, yPos)
@@ -286,7 +286,7 @@ export async function generateChantierPDF(chantier, equipe) {
       doc.setTextColor(120, 120, 120)
       doc.setFontSize(8)
       doc.setFont('helvetica', 'italic')
-      doc.text(`Photo aprÃ¨s nÂ°${i + 1}`, pageWidth / 2, yPos, { align: 'center' })
+      doc.text(`Photo après n°${i + 1}`, pageWidth / 2, yPos, { align: 'center' })
       yPos += 10
     }
   }
@@ -337,7 +337,7 @@ export async function generateChantierPDF(chantier, equipe) {
           doc.setTextColor(120, 120, 120)
           doc.setFontSize(8)
           doc.setFont('helvetica', 'italic')
-          doc.text(`Photo refus nÂ°${i + 1}`, pageWidth / 2, yPos, { align: 'center' })
+          doc.text(`Photo refus n°${i + 1}`, pageWidth / 2, yPos, { align: 'center' })
           yPos += 10
         }
       }
@@ -354,7 +354,7 @@ export async function generateChantierPDF(chantier, equipe) {
     doc.setTextColor(160, 160, 160)
     doc.setFont('helvetica', 'normal')
     doc.text(
-      `Document gÃ©nÃ©rÃ© automatiquement par EOIA Energie â Page ${i}/${pageCount}`,
+      `Document généré automatiquement par EOIA Energie — Page ${i}/${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
@@ -365,7 +365,7 @@ export async function generateChantierPDF(chantier, equipe) {
 }
 
 /**
- * GÃ©nÃ¨re un rapport PDF complet pour un dossier CEE
+ * Génère un rapport PDF complet pour un dossier CEE
  * Inclut : infos chantier, infos dossier, checklist documents, photos
  */
 export async function generateDossierCEEPDF(dossier, entreprise) {
@@ -377,7 +377,7 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
   const documents = dossier.documents || []
 
   // =============================================
-  // EN-TÃTE
+  // EN-TÊTE
   // =============================================
   doc.setFillColor(249, 115, 22)
   doc.rect(0, 0, pageWidth, 45, 'F')
@@ -389,10 +389,10 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
 
   doc.setFontSize(14)
   doc.setFont('helvetica', 'normal')
-  doc.text('Dossier CEE â Rapport complet', margin, 30)
+  doc.text('Dossier CEE — Rapport complet', margin, 30)
 
   doc.setFontSize(10)
-  doc.text(`RÃ©f: ${dossier.reference_externe || dossier.id?.slice(0, 8) || '---'}`, pageWidth - margin, 20, { align: 'right' })
+  doc.text(`Réf: ${dossier.reference_externe || dossier.id?.slice(0, 8) || '---'}`, pageWidth - margin, 20, { align: 'right' })
   doc.text(`Statut: ${dossier.statut?.replace(/_/g, ' ')}`, pageWidth - margin, 28, { align: 'right' })
   doc.text(formatDateTime(new Date()), pageWidth - margin, 36, { align: 'right' })
 
@@ -416,14 +416,14 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
   doc.setFontSize(10)
 
   const infoRows = [
-    ['Client', chantier.client_name || 'â'],
-    ['Adresse', chantier.adresse || 'â'],
-    ['Email', chantier.client_email || 'â'],
-    ['TÃ©lÃ©phone', chantier.client_phone || 'â'],
-    ['Date intervention', chantier.date_intervention ? formatDate(chantier.date_intervention) : 'â'],
-    ['UnitÃ©s installÃ©es', String(chantier.unit_count || 'â')],
-    ['Ãquipe', chantier.equipe?.name || 'â'],
-    ['Statut chantier', chantier.status || 'â'],
+    ['Client', chantier.client_name || '—'],
+    ['Adresse', chantier.adresse || '—'],
+    ['Email', chantier.client_email || '—'],
+    ['Téléphone', chantier.client_phone || '—'],
+    ['Date intervention', chantier.date_intervention ? formatDate(chantier.date_intervention) : '—'],
+    ['Unités installées', String(chantier.unit_count || '—')],
+    ['Équipe', chantier.equipe?.name || '—'],
+    ['Statut chantier', chantier.status || '—'],
   ]
 
   infoRows.forEach(([label, value]) => {
@@ -451,12 +451,12 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
   doc.setFontSize(10)
 
   const dossierRows = [
-    ['DÃ©lÃ©gataire', dossier.delegataire || 'â'],
-    ['RÃ©fÃ©rence externe', dossier.reference_externe || 'â'],
-    ['Prime estimÃ©e', dossier.montant_prime_estime ? `${parseFloat(dossier.montant_prime_estime).toLocaleString('fr-FR')} â¬` : 'â'],
-    ['Prime reÃ§ue', dossier.montant_prime_recu ? `${parseFloat(dossier.montant_prime_recu).toLocaleString('fr-FR')} â¬` : 'â'],
-    ['Date envoi', dossier.date_envoi ? formatDate(dossier.date_envoi) : 'â'],
-    ['Date validation', dossier.date_validation ? formatDate(dossier.date_validation) : 'â'],
+    ['Délégataire', dossier.delegataire || '—'],
+    ['Référence externe', dossier.reference_externe || '—'],
+    ['Prime estimée', dossier.montant_prime_estime ? `${parseFloat(dossier.montant_prime_estime).toLocaleString('fr-FR')} €` : '—'],
+    ['Prime reçue', dossier.montant_prime_recu ? `${parseFloat(dossier.montant_prime_recu).toLocaleString('fr-FR')} €` : '—'],
+    ['Date envoi', dossier.date_envoi ? formatDate(dossier.date_envoi) : '—'],
+    ['Date validation', dossier.date_validation ? formatDate(dossier.date_validation) : '—'],
   ]
 
   dossierRows.forEach(([label, value]) => {
@@ -484,7 +484,7 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
   doc.setTextColor(249, 115, 22)
   doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
-  doc.text(`DOCUMENTS (${documents.filter(d => d.valide).length}/${documents.length} validÃ©s)`, margin, yPos)
+  doc.text(`DOCUMENTS (${documents.filter(d => d.valide).length}/${documents.length} validés)`, margin, yPos)
   yPos += 2
   doc.line(margin, yPos, margin + 80, yPos)
   yPos += 8
@@ -493,7 +493,7 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
   documents.forEach(d => {
     yPos = checkPageBreak(doc, yPos, 8)
     const icon = d.valide ? '[OK]' : '[ ]'
-    const source = d.source === 'equipe_photo' || d.source === 'equipe_document' ? ' (Ã©quipe)' : ''
+    const source = d.source === 'equipe_photo' || d.source === 'equipe_document' ? ' (équipe)' : ''
     doc.setTextColor(d.valide ? 34 : 160, d.valide ? 197 : 160, d.valide ? 94 : 160)
     doc.setFont('helvetica', 'normal')
     doc.text(`${icon}  ${d.nom}${source}`, margin + 4, yPos)
@@ -537,8 +537,8 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
       doc.setTextColor(120, 120, 120)
       doc.setFontSize(8)
       doc.setFont('helvetica', 'italic')
-      const typeLabel = photoDoc.type_document === 'PHOTO_AVANT' ? 'AVANT' : 'APRÃS'
-      doc.text(`${typeLabel} â ${photoDoc.nom}`, pageWidth / 2, yPos, { align: 'center' })
+      const typeLabel = photoDoc.type_document === 'PHOTO_AVANT' ? 'AVANT' : 'APRÈS'
+      doc.text(`${typeLabel} — ${photoDoc.nom}`, pageWidth / 2, yPos, { align: 'center' })
       yPos += 12
     }
   }
@@ -553,7 +553,7 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
     doc.setTextColor(160, 160, 160)
     doc.setFont('helvetica', 'normal')
     doc.text(
-      `Dossier CEE â ${entreprise?.nom || 'Entreprise'} â ${chantier.client_name || ''} â Page ${i}/${pageCount}`,
+      `Dossier CEE — ${entreprise?.nom || 'Entreprise'} — ${chantier.client_name || ''} — Page ${i}/${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
