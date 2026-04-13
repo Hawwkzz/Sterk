@@ -21,7 +21,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     initAuth()
 
-    // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null)
@@ -53,7 +52,6 @@ export function AuthProvider({ children }) {
         console.error('[Auth] getSession error:', error)
         if (retryCount.current < maxRetries) {
           retryCount.current++
-          console.log(`[Auth] Retry ${retryCount.current}/${maxRetries}...`)
           return initAuth()
         }
         setLoading(false)
@@ -71,7 +69,6 @@ export function AuthProvider({ children }) {
       console.error('[Auth] getSession crashed:', err)
       if (retryCount.current < maxRetries) {
         retryCount.current++
-        console.log(`[Auth] Retry ${retryCount.current}/${maxRetries} après timeout...`)
         return initAuth()
       }
       setUser(null)
@@ -81,6 +78,7 @@ export function AuthProvider({ children }) {
 
   async function fetchProfile(userId) {
     try {
+      // Étape 1 : charger le profil
       const { data: profileData, error: profileError } = await withTimeout(
         supabase
           .from('profiles')
@@ -93,52 +91,60 @@ export function AuthProvider({ children }) {
       if (profileError) throw profileError
       setProfile(profileData)
 
-      // Si rôle équipe → charger équipe + secteur
+      // Étape 2 : charger équipe + entreprise EN PARALLÈLE (au lieu d'en série)
+      const promises = []
+
       if (profileData.equipe_id) {
-        const { data: equipeData, error: equipeError } = await withTimeout(
-          supabase
-            .from('equipes')
-            .select('*')
-            .eq('id', profileData.equipe_id)
-            .single(),
-          10000
-        )
-
-        if (!equipeError && equipeData) {
-          setEquipe(equipeData)
-
-          // Charger la config secteur de l'équipe
-          if (equipeData.secteur_id) {
-            const { data: secteurData, error: secteurError } = await withTimeout(
-              supabase
-                .from('secteurs')
-                .select('*')
-                .eq('id', equipeData.secteur_id)
-                .single(),
-              10000
-            )
-
-            if (!secteurError && secteurData) {
-              setSecteur(secteurData)
+        promises.push(
+          withTimeout(
+            supabase
+              .from('equipes')
+              .select('*')
+              .eq('id', profileData.equipe_id)
+              .single(),
+            10000
+          ).then(async ({ data: equipeData, error: equipeError }) => {
+            if (!equipeError && equipeData) {
+              setEquipe(equipeData)
+              // Charger secteur si besoin
+              if (equipeData.secteur_id) {
+                const { data: secteurData, error: secteurError } = await withTimeout(
+                  supabase
+                    .from('secteurs')
+                    .select('*')
+                    .eq('id', equipeData.secteur_id)
+                    .single(),
+                  10000
+                )
+                if (!secteurError && secteurData) {
+                  setSecteur(secteurData)
+                }
+              }
             }
-          }
-        }
+          })
+        )
       }
 
-      // Si rôle entreprise → charger entreprise
       if (profileData.entreprise_id) {
-        const { data: entrepriseData, error: entrepriseError } = await withTimeout(
-          supabase
-            .from('entreprises')
-            .select('*')
-            .eq('id', profileData.entreprise_id)
-            .single(),
-          10000
+        promises.push(
+          withTimeout(
+            supabase
+              .from('entreprises')
+              .select('*')
+              .eq('id', profileData.entreprise_id)
+              .single(),
+            10000
+          ).then(({ data: entrepriseData, error: entrepriseError }) => {
+            if (!entrepriseError && entrepriseData) {
+              setEntreprise(entrepriseData)
+            }
+          })
         )
+      }
 
-        if (!entrepriseError && entrepriseData) {
-          setEntreprise(entrepriseData)
-        }
+      // Attendre toutes les requêtes en parallèle
+      if (promises.length > 0) {
+        await Promise.all(promises)
       }
     } catch (error) {
       console.error('[Auth] Error fetching profile:', error)
@@ -190,7 +196,7 @@ export function AuthProvider({ children }) {
     profile,
     equipe,
     entreprise,
-    secteur, // config complète du secteur (unit_label, quota_mensuel, prime_par_unite, …)
+    secteur,
     loading,
     isAdmin,
     isEquipe,
