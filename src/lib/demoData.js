@@ -1,13 +1,17 @@
 // Données fictives pour le mode démo.
-// Tout est statique, lu seul. Aucune action ne les modifie.
+// Tout est statique, lecture seule. Aucune action ne les modifie.
 
 import { STATUTS, CEE_STATUTS, SECTEUR_DEFAUT } from './constants'
+
+// Helper : photos Picsum (fiables, stables, seedées)
+const PHOTO = (seed) => `https://picsum.photos/seed/${encodeURIComponent(seed)}/800/600`
 
 // ---- Profils / entités « utilisateur » fictives ----
 
 export const DEMO_ENTREPRISE = {
   id: 'demo-entreprise-001',
   name: 'EOIA Démo SAS',
+  nom: 'EOIA Démo SAS',
   siret: '89012345600012',
   adresse: '12 rue des Artisans, 59000 Lille',
   email: 'demo@eoia-energie.fr',
@@ -16,19 +20,27 @@ export const DEMO_ENTREPRISE = {
   created_at: '2024-01-15T10:00:00Z',
 }
 
+// Secteur générique pour la démo (pas "LED only") — label & unit neutres
+export const DEMO_SECTEUR = {
+  id: 'demo-secteur-multi',
+  slug: 'multi',
+  label: 'Chantiers énergétiques RGE',
+  unit_label: 'unités',
+  unit_label_plural: 'unités',
+  quota_mensuel: 1000,
+  prime_par_unite: 5,
+  icon: 'zap',
+  color: 'orange',
+}
+
 export const DEMO_EQUIPE = {
   id: 'demo-equipe-001',
   name: 'Équipe Nord - Démo',
   responsable: 'Thomas Lemaire',
   entreprise_id: 'demo-entreprise-001',
-  secteur_id: 'demo-secteur-led',
+  secteur_id: 'demo-secteur-multi',
   blocked: false,
   created_at: '2024-02-01T09:00:00Z',
-}
-
-export const DEMO_SECTEUR = {
-  ...SECTEUR_DEFAUT,
-  id: 'demo-secteur-led',
 }
 
 export const DEMO_PROFILE_ENTREPRISE = {
@@ -69,17 +81,17 @@ export const DEMO_USER_EQUIPE = {
   created_at: '2024-02-01T09:00:00Z',
 }
 
-// ---- Équipes (pour classement côté entreprise) ----
+// ---- Équipes (pour la vue entreprise / classement) ----
 
 export const DEMO_EQUIPES = [
   { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire', blocked: false, secteur: { slug: 'led', label: 'LED Relamping', unit_label: 'LED', prime_par_unite: 5 }, chantiersValides: 18 },
-  { id: 'demo-equipe-002', name: 'Équipe Sud - Démo', responsable: 'Sophie Bernard', blocked: false, secteur: { slug: 'led', label: 'LED Relamping', unit_label: 'LED', prime_par_unite: 5 }, chantiersValides: 14 },
-  { id: 'demo-equipe-003', name: 'Équipe IRVE - Démo', responsable: 'Marc Lefèvre', blocked: false, secteur: { slug: 'pac', label: 'PAC / IRVE', unit_label: 'bornes', prime_par_unite: 50 }, chantiersValides: 7 },
+  { id: 'demo-equipe-002', name: 'Équipe PAC / PV', responsable: 'Sophie Bernard', blocked: false, secteur: { slug: 'pac', label: 'PAC & PV Résidentiel', unit_label: 'unités', prime_par_unite: 50 }, chantiersValides: 11 },
+  { id: 'demo-equipe-003', name: 'Équipe IRVE', responsable: 'Marc Lefèvre', blocked: false, secteur: { slug: 'irve', label: 'Bornes IRVE', unit_label: 'bornes', prime_par_unite: 80 }, chantiersValides: 7 },
 ]
 
-// ---- Chantiers fictifs ----
-
-const PHOTO = (q) => `https://source.unsplash.com/800x600/?${encodeURIComponent(q)}`
+// ---- Chantiers fictifs (variés : LED, PAC, PV, IRVE) ----
+// IMPORTANT: photo_type doit être 'before' ou 'after' en minuscule pour
+// matcher le filtre de ChantierDetailPage.jsx (ligne 221/239).
 
 export const DEMO_CHANTIERS = [
   {
@@ -91,13 +103,15 @@ export const DEMO_CHANTIERS = [
     date_intervention: '2026-03-15',
     unit_count: 48,
     status: STATUTS.VALIDE,
-    commentaire: 'Remplacement total de l\'éclairage fluorescent par LED.',
+    commentaire: 'LED — Remplacement total de l\'éclairage fluorescent par LED (cabinet médical, 3 étages).',
     created_at: '2026-03-10T08:30:00Z',
     equipe_id: 'demo-equipe-001',
-    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
+    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p1', url: PHOTO('office,ceiling'), photo_type: 'AVANT', created_at: '2026-03-15T09:00:00Z' },
-      { id: 'p2', url: PHOTO('led,office,light'), photo_type: 'APRES', created_at: '2026-03-15T17:00:00Z' },
+      { id: 'p1a', url: PHOTO('office-ceiling-old'), photo_type: 'before', created_at: '2026-03-15T09:00:00Z' },
+      { id: 'p1b', url: PHOTO('office-hallway-fluo'), photo_type: 'before', created_at: '2026-03-15T09:05:00Z' },
+      { id: 'p1c', url: PHOTO('office-led-bright'), photo_type: 'after', created_at: '2026-03-15T17:00:00Z' },
+      { id: 'p1d', url: PHOTO('modern-led-ceiling'), photo_type: 'after', created_at: '2026-03-15T17:15:00Z' },
     ],
     documents: [],
     refus: [],
@@ -111,76 +125,84 @@ export const DEMO_CHANTIERS = [
     date_intervention: '2026-03-22',
     unit_count: 120,
     status: STATUTS.VALIDE,
-    commentaire: 'Relamping complet parking + enseignes.',
+    commentaire: 'LED — Relamping complet parking + enseignes extérieures (supermarché).',
     created_at: '2026-03-18T10:00:00Z',
     equipe_id: 'demo-equipe-001',
-    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
+    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p3', url: PHOTO('parking,night'), photo_type: 'AVANT' },
-      { id: 'p4', url: PHOTO('parking,led'), photo_type: 'APRES' },
+      { id: 'p2a', url: PHOTO('parking-night-old'), photo_type: 'before' },
+      { id: 'p2b', url: PHOTO('parking-empty-dark'), photo_type: 'before' },
+      { id: 'p2c', url: PHOTO('parking-led-bright'), photo_type: 'after' },
+      { id: 'p2d', url: PHOTO('shop-sign-led'), photo_type: 'after' },
     ],
     documents: [],
     refus: [],
   },
   {
     id: 'demo-chantier-003',
-    adresse: '14 rue de la République, 59800 Lille',
-    client_name: 'Logiroute Entrepôt',
-    client_email: 'logistique@logiroute.fr',
-    client_phone: '03 20 55 66 77',
+    adresse: '78 allée des Tilleuls, 59500 Douai',
+    client_name: 'Villa Delcourt',
+    client_email: 'delcourt.famille@orange.fr',
+    client_phone: '03 27 88 99 00',
     date_intervention: '2026-04-02',
-    unit_count: 210,
-    status: STATUTS.PENDING_CLIENT,
-    commentaire: 'En attente validation client.',
+    unit_count: 1,
+    status: STATUTS.VALIDE,
+    commentaire: 'PAC — Pompe à chaleur air/eau 14 kW, remplacement chaudière fioul. Prime MaPrimeRénov\' + CEE.',
     created_at: '2026-03-28T14:15:00Z',
     equipe_id: 'demo-equipe-001',
-    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
+    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p5', url: PHOTO('warehouse,old,light'), photo_type: 'AVANT' },
-      { id: 'p6', url: PHOTO('warehouse,led,bright'), photo_type: 'APRES' },
+      { id: 'p3a', url: PHOTO('old-boiler-basement'), photo_type: 'before' },
+      { id: 'p3b', url: PHOTO('fuel-tank-removal'), photo_type: 'before' },
+      { id: 'p3c', url: PHOTO('heat-pump-outdoor'), photo_type: 'after' },
+      { id: 'p3d', url: PHOTO('pac-installation'), photo_type: 'after' },
     ],
     documents: [],
     refus: [],
   },
   {
     id: 'demo-chantier-004',
-    adresse: '78 boulevard Victor Hugo, 59500 Douai',
-    client_name: 'Pharmacie Centrale',
-    client_email: 'pharmacie.centrale@orange.fr',
-    client_phone: '03 27 88 99 00',
+    adresse: '14 chemin des Vignes, 59800 Lille',
+    client_name: 'Ferme Bio Duhamel',
+    client_email: 'contact@ferme-duhamel.fr',
+    client_phone: '03 20 55 66 77',
     date_intervention: '2026-04-08',
-    unit_count: 22,
-    status: STATUTS.SUBMITTED,
-    commentaire: 'Soumis, dossier en cours de traitement.',
+    unit_count: 12,
+    status: STATUTS.PENDING_CLIENT,
+    commentaire: 'PV — Installation photovoltaïque 12 kWc sur toiture bâtiment agricole. Autoconsommation + revente surplus.',
     created_at: '2026-04-05T11:00:00Z',
     equipe_id: 'demo-equipe-001',
-    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
+    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p7', url: PHOTO('pharmacy,interior'), photo_type: 'AVANT' },
+      { id: 'p4a', url: PHOTO('barn-roof-before'), photo_type: 'before' },
+      { id: 'p4b', url: PHOTO('rural-farm-roof'), photo_type: 'before' },
+      { id: 'p4c', url: PHOTO('solar-panels-roof'), photo_type: 'after' },
+      { id: 'p4d', url: PHOTO('solar-installation'), photo_type: 'after' },
     ],
     documents: [],
     refus: [],
   },
   {
     id: 'demo-chantier-005',
-    adresse: '2 impasse des Peupliers, 59300 Valenciennes',
-    client_name: 'Garage Legrand',
-    client_email: 'garage.legrand@gmail.com',
-    client_phone: '03 27 11 22 00',
+    adresse: 'Parking Leclerc, 59200 Tourcoing',
+    client_name: 'Leclerc Tourcoing',
+    client_email: 'direction@leclerc-tourcoing.fr',
+    client_phone: '03 20 11 22 00',
     date_intervention: '2026-04-10',
-    unit_count: 34,
-    status: STATUTS.REFUSE,
-    commentaire: 'Photos APRES manquantes — à refaire.',
+    unit_count: 8,
+    status: STATUTS.SUBMITTED,
+    commentaire: 'IRVE — Installation 8 bornes de recharge 22 kW (4 double) sur parking supermarché. Conformité AFIREV.',
     created_at: '2026-04-09T09:30:00Z',
     equipe_id: 'demo-equipe-001',
-    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
+    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p8', url: PHOTO('garage,workshop'), photo_type: 'AVANT' },
+      { id: 'p5a', url: PHOTO('empty-parking-spots'), photo_type: 'before' },
+      { id: 'p5b', url: PHOTO('parking-ground-work'), photo_type: 'before' },
+      { id: 'p5c', url: PHOTO('ev-charging-station'), photo_type: 'after' },
+      { id: 'p5d', url: PHOTO('ev-charger-installed'), photo_type: 'after' },
     ],
     documents: [],
-    refus: [
-      { id: 'r1', commentaire: 'Il manque les photos APRES travaux.', created_at: '2026-04-09T15:00:00Z', photos: [] },
-    ],
+    refus: [],
   },
   {
     id: 'demo-chantier-006',
@@ -191,16 +213,41 @@ export const DEMO_CHANTIERS = [
     date_intervention: '2026-04-12',
     unit_count: 18,
     status: STATUTS.VALIDE,
-    commentaire: 'Validé par le client.',
+    commentaire: 'LED — Rénovation éclairage boutique + fournil (tubes LED T8 24W).',
     created_at: '2026-04-11T08:00:00Z',
     equipe_id: 'demo-equipe-001',
-    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
+    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p9', url: PHOTO('bakery,interior'), photo_type: 'AVANT' },
-      { id: 'p10', url: PHOTO('bakery,led'), photo_type: 'APRES' },
+      { id: 'p6a', url: PHOTO('bakery-interior-old'), photo_type: 'before' },
+      { id: 'p6b', url: PHOTO('bakery-counter-dim'), photo_type: 'before' },
+      { id: 'p6c', url: PHOTO('bakery-bright-led'), photo_type: 'after' },
+      { id: 'p6d', url: PHOTO('bakery-showcase-led'), photo_type: 'after' },
     ],
     documents: [],
     refus: [],
+  },
+  {
+    id: 'demo-chantier-007',
+    adresse: '2 impasse du Lac, 59300 Valenciennes',
+    client_name: 'M. et Mme Lefebvre',
+    client_email: 'lefebvre.jm@gmail.com',
+    client_phone: '03 27 11 22 33',
+    date_intervention: '2026-04-14',
+    unit_count: 1,
+    status: STATUTS.REFUSE,
+    commentaire: 'PAC — Pompe à chaleur géothermique 9 kW. Photos APRES manquantes lors de la soumission.',
+    created_at: '2026-04-14T09:30:00Z',
+    equipe_id: 'demo-equipe-001',
+    equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
+    photos: [
+      { id: 'p7a', url: PHOTO('house-basement'), photo_type: 'before' },
+    ],
+    documents: [],
+    refus: [
+      { id: 'r1', commentaire: 'Il manque les photos APRES travaux (unité extérieure + arrivée chauffage).', created_at: '2026-04-14T15:00:00Z', photos: [
+        { id: 'rp1', url: PHOTO('refus-photo-missing') },
+      ] },
+    ],
   },
 ]
 
@@ -225,8 +272,8 @@ export const DEMO_DOSSIERS_CEE = [
     documents: [
       { id: 'd1', type_document: 'ATTESTATION_HONNEUR', nom: 'attestation.pdf', url: '#', valide: true },
       { id: 'd2', type_document: 'FACTURE', nom: 'facture-001.pdf', url: '#', valide: true },
-      { id: 'd3', type_document: 'PHOTO_AVANT', nom: 'avant.jpg', url: PHOTO('office,ceiling'), valide: true },
-      { id: 'd4', type_document: 'PHOTO_APRES', nom: 'apres.jpg', url: PHOTO('led,office,light'), valide: true },
+      { id: 'd3', type_document: 'PHOTO_AVANT', nom: 'avant.jpg', url: PHOTO('office-ceiling-old'), valide: true },
+      { id: 'd4', type_document: 'PHOTO_APRES', nom: 'apres.jpg', url: PHOTO('office-led-bright'), valide: true },
     ],
   },
   {
@@ -252,9 +299,30 @@ export const DEMO_DOSSIERS_CEE = [
   },
   {
     id: 'demo-dossier-003',
-    chantier_id: 'demo-chantier-006',
+    chantier_id: 'demo-chantier-003',
     entreprise_id: 'demo-entreprise-001',
     delegataire: 'TotalEnergies',
+    statut: CEE_STATUTS.VALIDE,
+    montant_prime_estime: 4200,
+    montant_prime_recu: 4200,
+    created_at: '2026-04-05T09:00:00Z',
+    chantier: {
+      id: 'demo-chantier-003', adresse: '78 allée des Tilleuls, 59500 Douai',
+      unit_count: 1, client_name: 'Villa Delcourt', client_email: 'delcourt.famille@orange.fr',
+      status: STATUTS.VALIDE, date_intervention: '2026-04-02',
+      equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
+    },
+    documents: [
+      { id: 'd8', type_document: 'ATTESTATION_HONNEUR', nom: 'attestation-pac.pdf', url: '#', valide: true },
+      { id: 'd9', type_document: 'FICHE_TECHNIQUE', nom: 'fiche-pac-14kw.pdf', url: '#', valide: true },
+      { id: 'd10', type_document: 'FACTURE', nom: 'facture-pac.pdf', url: '#', valide: true },
+    ],
+  },
+  {
+    id: 'demo-dossier-004',
+    chantier_id: 'demo-chantier-006',
+    entreprise_id: 'demo-entreprise-001',
+    delegataire: 'Engie',
     statut: CEE_STATUTS.A_COMPLETER,
     montant_prime_estime: 450,
     montant_prime_recu: 0,
@@ -266,7 +334,7 @@ export const DEMO_DOSSIERS_CEE = [
       equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
     },
     documents: [
-      { id: 'd8', type_document: 'PHOTO_AVANT', nom: 'avant.jpg', url: PHOTO('bakery,interior'), valide: true },
+      { id: 'd11', type_document: 'PHOTO_AVANT', nom: 'avant.jpg', url: PHOTO('bakery-interior-old'), valide: true },
     ],
   },
 ]
@@ -316,8 +384,9 @@ export function computeDemoEntrepriseStats() {
 }
 
 export const DEMO_CLASSEMENT = [
-  { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', totalLed: 186, prime: 0, isMe: true, rank: 2 },
   { id: 'demo-equipe-004', name: 'Équipe Métropole', totalLed: 240, prime: 0, isMe: false, rank: 1 },
-  { id: 'demo-equipe-002', name: 'Équipe Sud - Démo', totalLed: 140, prime: 0, isMe: false, rank: 3 },
+  { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', totalLed: 186, prime: 0, isMe: true, rank: 2 },
+  { id: 'demo-equipe-002', name: 'Équipe PAC / PV', totalLed: 140, prime: 0, isMe: false, rank: 3 },
   { id: 'demo-equipe-005', name: 'Équipe Flandres', totalLed: 95, prime: 0, isMe: false, rank: 4 },
+  { id: 'demo-equipe-003', name: 'Équipe IRVE', totalLed: 72, prime: 0, isMe: false, rank: 5 },
 ]
