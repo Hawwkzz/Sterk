@@ -8,7 +8,7 @@ const DEMANDE_EMAIL = 'bousanna.o@boia.info'
 // Bandeau orange fixe en haut de l'app quand on est en mode démo.
 // À monter dans Layout.jsx.
 export default function DemoBanner() {
-  const navigate = useNavigate()
+  const navigate = useNavigate()h
   if (!isDemoMode()) return null
   const role = getDemoRole()
 
@@ -18,10 +18,10 @@ export default function DemoBanner() {
   }
 
   function demanderAcces() {
-    const subject = encodeURIComponent('Demande d\'accès à Sterk')
+    const subject = encodeURIComponent('Demande d\'accès à EOIA Energie')
     const body = encodeURIComponent(
       `Bonjour,\n\n` +
-      `Je viens de tester la démo de Sterk (côté ${role === 'entreprise' ? 'Entreprise' : 'Équipe'}) et j'aimerais avoir un accès personnel pour essayer avec mes propres chantiers.\n\n` +
+      `Je viens de tester la démo de EOIA Energie (côté ${role === 'entreprise' ? 'Entreprise' : 'Équipe'}) et j'aimerais avoir un accès personnel pour essayer avec mes propres chantiers.\n\n` +
       `Nom / Entreprise : \n` +
       `Téléphone : \n` +
       `Secteur principal (LED, PAC, PV, IRVE) : \n\n` +
