@@ -3,7 +3,7 @@ import { Sparkles, X } from 'lucide-react'
 import { isDemoMode, exitDemoMode, getDemoRole } from '../lib/demoMode'
 
 // ⚠️ Change cette adresse si besoin : c'est là que seront envoyées les demandes d'accès
-const DEMANDE_EMAIL = 'omarjckf@gmail.com'
+const DEMANDE_EMAIL = 'bousanna.o@boia.info'
 
 // Bandeau orange fixe en haut de l'app quand on est en mode démo.
 // À monter dans Layout.jsx.
