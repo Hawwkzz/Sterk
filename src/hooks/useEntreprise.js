@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { isDemoMode } from '../lib/demoMode'
+import {
+  DEMO_DOSSIERS_CEE, DEMO_EQUIPES, DEMO_CHANTIERS,
+  computeDemoEntrepriseStats,
+} from '../lib/demoData'
+import { STATUTS } from '../lib/constants'
 
 // Hook: liste des dossiers CEE de l'entreprise
 export function useDossiersCEE(filters = {}) {
@@ -10,6 +16,13 @@ export function useDossiersCEE(filters = {}) {
   const [error, setError] = useState(null)
 
   const fetch = useCallback(async () => {
+    if (isDemoMode()) {
+      let list = [...DEMO_DOSSIERS_CEE]
+      if (filters.statut) list = list.filter(d => d.statut === filters.statut)
+      setDossiers(list); setError(null); setLoading(false)
+      return
+    }
+
     if (!entreprise?.id) return
     setLoading(true)
 
@@ -48,7 +61,7 @@ export function useDossiersCEE(filters = {}) {
   return { dossiers, loading, error, refetch: fetch }
 }
 
-// Hook: un seul dossier CEE avec dÃ©tails
+// Hook: un seul dossier CEE avec détails
 export function useDossierCEE(dossierId) {
   const [dossier, setDossier] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -56,6 +69,14 @@ export function useDossierCEE(dossierId) {
 
   const fetch = useCallback(async () => {
     if (!dossierId) return
+
+    if (isDemoMode()) {
+      const found = DEMO_DOSSIERS_CEE.find(d => d.id === dossierId)
+      setDossier(found || null); setError(found ? null : new Error('Introuvable'))
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -97,17 +118,19 @@ export function useEntrepriseStats() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setStats(computeDemoEntrepriseStats()); setLoading(false); return
+    }
+
     if (!entreprise?.id) return
 
     async function fetchStats() {
       try {
-        // RÃ©cupÃ©rer tous les dossiers CEE
         const { data: dossiers } = await supabase
           .from('dossiers_cee')
           .select('statut, montant_prime_estime, montant_prime_recu')
           .eq('entreprise_id', entreprise.id)
 
-        // RÃ©cupÃ©rer les chantiers validÃ©s des Ã©quipes de l'entreprise
         const { data: equipes } = await supabase
           .from('equipes')
           .select('id')
@@ -127,7 +150,6 @@ export function useEntrepriseStats() {
 
           chantiersValides = chantiers?.length || 0
 
-          // Compter ceux sans dossier CEE
           const { data: dossiersExistants } = await supabase
             .from('dossiers_cee')
             .select('chantier_id')
@@ -168,13 +190,17 @@ export function useEntrepriseStats() {
   return { stats, loading }
 }
 
-// Hook: Ã©quipes de l'entreprise avec leur performance
+// Hook: équipes de l'entreprise avec leur performance
 export function useEntrepriseEquipes() {
   const { entreprise } = useAuth()
   const [equipes, setEquipes] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setEquipes(DEMO_EQUIPES); setLoading(false); return
+    }
+
     if (!entreprise?.id) return
 
     async function fetchEquipes() {
@@ -187,7 +213,6 @@ export function useEntrepriseEquipes() {
           `)
           .eq('entreprise_id', entreprise.id)
 
-        // Pour chaque Ã©quipe, compter les chantiers validÃ©s
         const enriched = await Promise.all((equipesData || []).map(async (eq) => {
           const { count } = await supabase
             .from('chantiers')
@@ -212,18 +237,24 @@ export function useEntrepriseEquipes() {
   return { equipes, loading }
 }
 
-// Hook: chantiers validÃ©s sans dossier CEE (pour crÃ©er de nouveaux dossiers)
+// Hook: chantiers validés sans dossier CEE
 export function useChantiersSansDossier() {
   const { entreprise } = useAuth()
   const [chantiers, setChantiers] = useState([])
   const [loading, setLoading] = useState(true)
 
   const fetch = useCallback(async () => {
+    if (isDemoMode()) {
+      const idsAvecDossier = new Set(DEMO_DOSSIERS_CEE.map(d => d.chantier_id))
+      const sansDossier = DEMO_CHANTIERS
+        .filter(c => c.status === STATUTS.VALIDE && !idsAvecDossier.has(c.id))
+      setChantiers(sansDossier); setLoading(false); return
+    }
+
     if (!entreprise?.id) return
     setLoading(true)
 
     try {
-      // Ãquipes de l'entreprise
       const { data: equipes } = await supabase
         .from('equipes')
         .select('id')
@@ -232,7 +263,6 @@ export function useChantiersSansDossier() {
       const equipeIds = (equipes || []).map(e => e.id)
       if (equipeIds.length === 0) { setChantiers([]); setLoading(false); return }
 
-      // Chantiers validÃ©s
       const { data: chantiersValides } = await supabase
         .from('chantiers')
         .select('id, adresse, unit_count, client_name, date_intervention, equipe:equipes(id, name)')
@@ -240,7 +270,6 @@ export function useChantiersSansDossier() {
         .in('equipe_id', equipeIds)
         .order('date_intervention', { ascending: false })
 
-      // Dossiers existants
       const { data: dossiers } = await supabase
         .from('dossiers_cee')
         .select('chantier_id')
