@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Home, FileText, Award, BarChart3, Settings, Zap, LogOut, Shield, FileCheck, Users, Building2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { cn } from '../lib/utils'
+import DemoBanner from './DemoBanner'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Accueil' },
@@ -43,6 +44,9 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
+        {/* Bandeau mode démo (n'apparaît que si localStorage.sterk_demo_role est set) */}
+        <DemoBanner />
+
         {/* Header */}
         <header className="sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800/50">
           {/* Status bar placeholder */}
