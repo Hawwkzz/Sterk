@@ -1,6 +1,12 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { SECTEUR_DEFAUT } from '../lib/constants'
+import { isDemoMode, getDemoRole, exitDemoMode } from '../lib/demoMode'
+import {
+  DEMO_USER_ENTREPRISE, DEMO_USER_EQUIPE,
+  DEMO_PROFILE_ENTREPRISE, DEMO_PROFILE_EQUIPE,
+  DEMO_EQUIPE, DEMO_ENTREPRISE, DEMO_SECTEUR,
+} from '../lib/demoData'
 
 const AuthContext = createContext({})
 
@@ -19,10 +25,32 @@ export function AuthProvider({ children }) {
   const maxRetries = 2
 
   useEffect(() => {
+    // --- MODE DÉMO : on court-circuite Supabase et on injecte des valeurs fictives ---
+    if (isDemoMode()) {
+      const role = getDemoRole()
+      if (role === 'entreprise') {
+        setUser(DEMO_USER_ENTREPRISE)
+        setProfile(DEMO_PROFILE_ENTREPRISE)
+        setEntreprise(DEMO_ENTREPRISE)
+        setEquipe(null)
+        setSecteur(DEMO_SECTEUR)
+      } else {
+        setUser(DEMO_USER_EQUIPE)
+        setProfile(DEMO_PROFILE_EQUIPE)
+        setEquipe(DEMO_EQUIPE)
+        setEntreprise(DEMO_ENTREPRISE)
+        setSecteur(DEMO_SECTEUR)
+      }
+      setLoading(false)
+      return
+    }
+
     initAuth()
 
+    // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (isDemoMode()) return // safety
         setUser(session?.user ?? null)
         if (session?.user) {
           await fetchProfile(session.user.id)
@@ -52,6 +80,7 @@ export function AuthProvider({ children }) {
         console.error('[Auth] getSession error:', error)
         if (retryCount.current < maxRetries) {
           retryCount.current++
+          console.log(`[Auth] Retry ${retryCount.current}/${maxRetries}...`)
           return initAuth()
         }
         setLoading(false)
@@ -69,6 +98,7 @@ export function AuthProvider({ children }) {
       console.error('[Auth] getSession crashed:', err)
       if (retryCount.current < maxRetries) {
         retryCount.current++
+        console.log(`[Auth] Retry ${retryCount.current}/${maxRetries} après timeout...`)
         return initAuth()
       }
       setUser(null)
@@ -78,7 +108,6 @@ export function AuthProvider({ children }) {
 
   async function fetchProfile(userId) {
     try {
-      // Étape 1 : charger le profil
       const { data: profileData, error: profileError } = await withTimeout(
         supabase
           .from('profiles')
@@ -91,60 +120,52 @@ export function AuthProvider({ children }) {
       if (profileError) throw profileError
       setProfile(profileData)
 
-      // Étape 2 : charger équipe + entreprise EN PARALLÈLE (au lieu d'en série)
-      const promises = []
-
+      // Si rôle équipe → charger équipe + secteur
       if (profileData.equipe_id) {
-        promises.push(
-          withTimeout(
-            supabase
-              .from('equipes')
-              .select('*')
-              .eq('id', profileData.equipe_id)
-              .single(),
-            10000
-          ).then(async ({ data: equipeData, error: equipeError }) => {
-            if (!equipeError && equipeData) {
-              setEquipe(equipeData)
-              // Charger secteur si besoin
-              if (equipeData.secteur_id) {
-                const { data: secteurData, error: secteurError } = await withTimeout(
-                  supabase
-                    .from('secteurs')
-                    .select('*')
-                    .eq('id', equipeData.secteur_id)
-                    .single(),
-                  10000
-                )
-                if (!secteurError && secteurData) {
-                  setSecteur(secteurData)
-                }
-              }
-            }
-          })
+        const { data: equipeData, error: equipeError } = await withTimeout(
+          supabase
+            .from('equipes')
+            .select('*')
+            .eq('id', profileData.equipe_id)
+            .single(),
+          10000
         )
+
+        if (!equipeError && equipeData) {
+          setEquipe(equipeData)
+
+          // Charger la config secteur de l'équipe
+          if (equipeData.secteur_id) {
+            const { data: secteurData, error: secteurError } = await withTimeout(
+              supabase
+                .from('secteurs')
+                .select('*')
+                .eq('id', equipeData.secteur_id)
+                .single(),
+              10000
+            )
+
+            if (!secteurError && secteurData) {
+              setSecteur(secteurData)
+            }
+          }
+        }
       }
 
+      // Si rôle entreprise → charger entreprise
       if (profileData.entreprise_id) {
-        promises.push(
-          withTimeout(
-            supabase
-              .from('entreprises')
-              .select('*')
-              .eq('id', profileData.entreprise_id)
-              .single(),
-            10000
-          ).then(({ data: entrepriseData, error: entrepriseError }) => {
-            if (!entrepriseError && entrepriseData) {
-              setEntreprise(entrepriseData)
-            }
-          })
+        const { data: entrepriseData, error: entrepriseError } = await withTimeout(
+          supabase
+            .from('entreprises')
+            .select('*')
+            .eq('id', profileData.entreprise_id)
+            .single(),
+          10000
         )
-      }
 
-      // Attendre toutes les requêtes en parallèle
-      if (promises.length > 0) {
-        await Promise.all(promises)
+        if (!entrepriseError && entrepriseData) {
+          setEntreprise(entrepriseData)
+        }
       }
     } catch (error) {
       console.error('[Auth] Error fetching profile:', error)
@@ -162,6 +183,14 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    // En mode démo, "déconnexion" = quitter la démo sans toucher Supabase
+    if (isDemoMode()) {
+      exitDemoMode()
+      setUser(null); setProfile(null); setEquipe(null); setEntreprise(null)
+      setSecteur(SECTEUR_DEFAUT)
+      window.location.href = '/login'
+      return { error: null }
+    }
     const { error } = await supabase.auth.signOut()
     if (!error) {
       setUser(null)
@@ -201,11 +230,12 @@ export function AuthProvider({ children }) {
     isAdmin,
     isEquipe,
     isEntreprise,
+    isDemo: isDemoMode(),
     signIn,
     signOut,
     resetPassword,
     updatePassword,
-    refreshProfile: () => user && fetchProfile(user.id),
+    refreshProfile: () => user && !isDemoMode() && fetchProfile(user.id),
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
