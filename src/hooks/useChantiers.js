@@ -4,6 +4,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { getCurrentMonthRange, getCurrentYearRange } from '../lib/utils'
 import { STATUTS, SECTEUR_DEFAUT } from '../lib/constants'
 import toast from 'react-hot-toast'
+import { isDemoMode } from '../lib/demoMode'
+import {
+  DEMO_CHANTIERS, computeDemoChantierStats, DEMO_CLASSEMENT,
+} from '../lib/demoData'
 
 function withTimeout(promise, ms = 10000) {
   return Promise.race([
@@ -21,6 +25,16 @@ export function useChantiers(filters = {}) {
   const [error, setError] = useState(null)
 
   const fetchChantiers = useCallback(async () => {
+    // --- DÉMO : renvoie les mocks ---
+    if (isDemoMode()) {
+      let list = [...DEMO_CHANTIERS]
+      if (filters.status) list = list.filter(c => c.status === filters.status)
+      if (filters.dateFrom) list = list.filter(c => c.date_intervention >= filters.dateFrom)
+      if (filters.dateTo) list = list.filter(c => c.date_intervention <= filters.dateTo)
+      setChantiers(list); setError(null); setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       let query = supabase.from('chantiers').select(`*, equipe:equipes(id, name)`).order('created_at', { ascending: false })
@@ -39,6 +53,7 @@ export function useChantiers(filters = {}) {
   }, [equipe, isAdmin, filters.status, filters.dateFrom, filters.dateTo])
 
   useEffect(() => {
+    if (isDemoMode()) { fetchChantiers(); return }
     if (equipe || isAdmin) fetchChantiers()
     else setLoading(false)
   }, [fetchChantiers, equipe, isAdmin])
@@ -53,6 +68,13 @@ export function useChantier(chantierId) {
 
   const fetchChantier = useCallback(async () => {
     if (!chantierId) { setLoading(false); return }
+
+    if (isDemoMode()) {
+      const found = DEMO_CHANTIERS.find(c => c.id === chantierId)
+      setChantier(found || null); setError(found ? null : 'Introuvable'); setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       const { data, error: fetchError } = await withTimeout(
@@ -81,6 +103,10 @@ export function useChantierStats() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setStats(computeDemoChantierStats()); setLoading(false); return
+    }
+
     if (!equipe && !isAdmin) { setLoading(false); return }
     async function fetchStats() {
       try {
@@ -119,6 +145,12 @@ export function useClassement() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setClassement(DEMO_CLASSEMENT)
+      setMyRank(DEMO_CLASSEMENT.find(e => e.isMe)?.rank || null)
+      setLoading(false); return
+    }
+
     async function fetchClassement() {
       try {
         setLoading(true)
@@ -145,4 +177,4 @@ export function useClassement() {
   }, [equipe, secteur])
 
   return { classement, myRank, loading }
-        }
+}
