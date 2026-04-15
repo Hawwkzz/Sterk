@@ -30,13 +30,13 @@ export const DEMO_ENTREPRISE = {
   created_at: '2024-01-15T10:00:00Z',
 }
 
-// Secteur générique pour la démo (pas "LED only") — label & unit neutres
+// Secteur LED pour la démo
 export const DEMO_SECTEUR = {
-  id: 'demo-secteur-multi',
-  slug: 'multi',
-  label: 'Chantiers énergétiques RGE',
-  unit_label: 'unités',
-  unit_label_plural: 'unités',
+  id: 'demo-secteur-led',
+  slug: 'led',
+  label: 'LED Relamping',
+  unit_label: 'LED',
+  unit_label_plural: 'LED',
   quota_mensuel: 1000,
   prime_par_unite: 5,
   icon: 'zap',
@@ -48,7 +48,7 @@ export const DEMO_EQUIPE = {
   name: 'Équipe Nord - Démo',
   responsable: 'Thomas Lemaire',
   entreprise_id: 'demo-entreprise-001',
-  secteur_id: 'demo-secteur-multi',
+  secteur_id: 'demo-secteur-led',
   blocked: false,
   created_at: '2024-02-01T09:00:00Z',
 }
