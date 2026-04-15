@@ -19,6 +19,7 @@ const entrepriseNavItems = [
   { to: '/entreprise', icon: Home, label: 'Accueil' },
   { to: '/entreprise/dossiers', icon: FileCheck, label: 'Dossiers' },
   { to: '/entreprise/equipes', icon: Users, label: 'Équipes' },
+  { to: '/entreprise/parametres', icon: Settings, label: 'Primes' },
 ]
 
 export default function Layout() {
