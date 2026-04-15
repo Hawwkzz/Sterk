@@ -36,6 +36,8 @@ export default function DossierCEEDetailPage() {
   const [editForm, setEditForm] = useState({})
   const [docForm, setDocForm] = useState({ type_document: 'ATTESTATION_HONNEUR', nom: '', file: null })
   const [saving, setSaving] = useState(false)
+  const [showRefuseModal, setShowRefuseModal] = useState(false)
+  const [refuseForm, setRefuseForm] = useState({ motif_refus: '', demande_complement: '', date_reponse_delegataire: '' })
   const [uploading, setUploading] = useState(false)
   const [importing, setImporting] = useState(null)
   const [downloadingPDF, setDownloadingPDF] = useState(false)
@@ -939,7 +941,7 @@ export default function DossierCEEDetailPage() {
             <Button className="flex-1" onClick={() => updateStatut(CEE_STATUTS.VALIDE, { date_validation: new Date().toISOString().split('T')[0] })} loading={saving}>
               <CheckCircle2 className="w-4 h-4" /> Validé
             </Button>
-            <Button className="flex-1" variant="danger" onClick={() => updateStatut(CEE_STATUTS.REFUSE)} loading={saving}>
+            <Button className="flex-1" variant="danger" onClick={() => { setRefuseForm({ motif_refus: '', demande_complement: '', date_reponse_delegataire: new Date().toISOString().split('T')[0] }); setShowRefuseModal(true) }} loading={saving}>
               <XCircle className="w-4 h-4" /> Refusé
             </Button>
           </div>
@@ -1116,6 +1118,58 @@ export default function DossierCEEDetailPage() {
           <Button className="w-full" onClick={addDocument} loading={saving || uploading}>
             {uploading ? 'Upload en cours...' : 'Ajouter le document'}
           </Button>
+        </div>
+      </Modal>
+      <Modal open={showRefuseModal} onClose={() => setShowRefuseModal(false)} title="Motif de refus du délégataire">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Motif du refus *</label>
+            <textarea
+              className="w-full px-3 py-2 border rounded-lg"
+              rows={4}
+              value={refuseForm.motif_refus}
+              onChange={(e) => setRefuseForm({ ...refuseForm, motif_refus: e.target.value })}
+              placeholder="Ex: attestation sur l'honneur manquante, ETAS non conforme, pièce d'identité illisible..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Demande de complément</label>
+            <textarea
+              className="w-full px-3 py-2 border rounded-lg"
+              rows={3}
+              value={refuseForm.demande_complement}
+              onChange={(e) => setRefuseForm({ ...refuseForm, demande_complement: e.target.value })}
+              placeholder="Documents ou informations à fournir pour ré-instruire le dossier"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Date de réponse du délégataire</label>
+            <input
+              type="date"
+              className="w-full px-3 py-2 border rounded-lg"
+              value={refuseForm.date_reponse_delegataire}
+              onChange={(e) => setRefuseForm({ ...refuseForm, date_reponse_delegataire: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setShowRefuseModal(false)}>Annuler</Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              loading={saving}
+              disabled={!refuseForm.motif_refus.trim()}
+              onClick={async () => {
+                await updateStatut(CEE_STATUTS.REFUSE, {
+                  motif_refus: refuseForm.motif_refus,
+                  demande_complement: refuseForm.demande_complement || null,
+                  date_reponse_delegataire: refuseForm.date_reponse_delegataire || null,
+                })
+                setShowRefuseModal(false)
+              }}
+            >
+              Confirmer le refus
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
