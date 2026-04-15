@@ -8,7 +8,7 @@ const DEMANDE_EMAIL = 'bousanna.o@boia.info'
 // Bandeau orange fixe en haut de l'app quand on est en mode démo.
 // À monter dans Layout.jsx.
 export default function DemoBanner() {
-  const navigate = useNavigate()h
+  const navigate = useNavigate()
   if (!isDemoMode()) return null
   const role = getDemoRole()
 
