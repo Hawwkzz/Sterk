@@ -61,7 +61,7 @@ export default function LoginPage() {
 
   function launchDemo(role) {
     enterDemoMode(role)
-    toast.success(`Mode démo ${role === 'entreprise' ? 'Entreprise' : 'Équipe'} activé`)
+    toast.success(`Interface ${role === 'entreprise' ? 'Entreprise' : 'Équipe'} lancée`)
     // Reload complet pour que AuthContext reparte proprement sur le mode démo
     window.location.href = role === 'entreprise' ? '/entreprise' : '/'
   }
@@ -99,7 +99,7 @@ export default function LoginPage() {
               className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 hover:border-orange-500/50 transition-all"
             >
               <Building2 className="w-6 h-6 text-orange-400 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold text-white">Démo Entreprise</span>
+              <span className="text-sm font-semibold text-white">Interface Entreprise</span>
               <span className="text-[10px] text-zinc-500 leading-tight text-center">Dossiers CEE, équipes, primes</span>
             </button>
             <button
@@ -108,7 +108,7 @@ export default function LoginPage() {
               className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 hover:border-orange-500/50 transition-all"
             >
               <HardHat className="w-6 h-6 text-orange-400 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold text-white">Démo Équipe</span>
+              <span className="text-sm font-semibold text-white">Interface Équipe</span>
               <span className="text-[10px] text-zinc-500 leading-tight text-center">Chantiers, photos, classement</span>
             </button>
           </div>
