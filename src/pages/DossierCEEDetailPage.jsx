@@ -14,7 +14,7 @@ import { formatDate, formatCurrency } from '../lib/utils'
 import { generateDossierCEEPDF, downloadPDF } from '../lib/pdf'
 import toast from 'react-hot-toast'
 import FicheOperationForm from '../components/FicheOperationForm'
-import { computeExpiryStatus } from '../lib/cee'
+import { computeExpiryStatus, estimatePrime, checkConformity, exportDossierCSV, downloadCSV } from '../lib/cee'
 
 const STATUT_FLOW = [
   CEE_STATUTS.A_COMPLETER,
@@ -827,7 +827,20 @@ export default function DossierCEEDetailPage() {
       })()}
 
       {/* Fiche d'opération standardisée (kWh cumac) */}
-      <FicheOperationForm
+{(() => {
+        const issues = checkConformity(techDraft?.fiche_code ?? dossier.fiche_code, techDraft?.donnees_techniques ?? dossier.donnees_techniques)
+        if (!issues.length) return null
+        const errs = issues.filter(i => i.level === 'error')
+        const warns = issues.filter(i => i.level === 'warning')
+        return (
+          <Card className="p-3 space-y-2 border-l-4 border-l-red-500">
+            <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-400" /><span className="text-white text-sm font-semibold">Conformité CEE</span></div>
+            {errs.map((i, k) => (<p key={'e'+k} className="text-xs text-red-300">❌ {i.message}</p>))}
+            {warns.map((i, k) => (<p key={'w'+k} className="text-xs text-amber-300">⚠ {i.message}</p>))}
+          </Card>
+        )
+      })()}
+            <FicheOperationForm
         value={techDraft ?? { fiche_code: dossier.fiche_code, donnees_techniques: dossier.donnees_techniques, kwh_cumac: dossier.kwh_cumac, zone_climatique: dossier.zone_climatique }}
         onChange={(v) => setTechDraft(v)}
         saving={savingTech}
@@ -840,6 +853,7 @@ export default function DossierCEEDetailPage() {
               donnees_techniques: v.donnees_techniques,
               kwh_cumac: v.kwh_cumac,
               zone_climatique: v.zone_climatique,
+              montant_prime_estime: v.kwh_cumac ? estimatePrime(v.kwh_cumac, dossier.delegataire) : dossier.montant_prime_estime,
               updated_at: new Date().toISOString(),
             }).eq('id', dossier.id)
             if (error) throw error
@@ -850,6 +864,37 @@ export default function DossierCEEDetailPage() {
           finally { setSavingTech(false) }
         }}
       />
+
+      <Card className="p-4 space-y-2">
+        <div className="flex items-center gap-2"><Download className="w-4 h-4 text-orange-400" /><span className="text-white text-sm font-semibold">Export & Attestation</span></div>
+        <Button
+          className="w-full"
+          variant="secondary"
+          onClick={() => {
+            const csv = exportDossierCSV(dossier)
+            const name = (dossier.reference_externe || dossier.id) + '_export.csv'
+            downloadCSV(name, csv)
+            toast.success('CSV exporté')
+          }}
+        >
+          <FileText className="w-4 h-4" />Export CSV délégataire
+        </Button>
+        <Button
+          className="w-full"
+          variant="secondary"
+          onClick={async () => {
+            try {
+              const { generateAttestationHonneurPDF } = await import('../lib/pdf')
+              const pdf = generateAttestationHonneurPDF(dossier, entreprise)
+              const name = 'Attestation_Honneur_' + (dossier.reference_externe || dossier.id) + '.pdf'
+              downloadPDF(pdf, name)
+              toast.success('Attestation générée')
+            } catch (err) { toast.error('Erreur: ' + err.message) }
+          }}
+        >
+          <FileCheck className="w-4 h-4" />Générer Attestation sur l'Honneur
+        </Button>
+      </Card>
 
       {/* === TÉLÉCHARGEMENT DOSSIER COMPLET === */}
       <Card className="p-4">
