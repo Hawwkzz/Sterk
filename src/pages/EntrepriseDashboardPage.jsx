@@ -142,7 +142,6 @@ export default function EntrepriseDashboardPage() {
             </div>
           </div>
         </Card>
-        </>
 
         <Card className="p-4">
           <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
@@ -228,6 +227,7 @@ export default function EntrepriseDashboardPage() {
             })}
           </div>
         </Card>
+        </>
       )}
 
       {/* Accès rapide */}
