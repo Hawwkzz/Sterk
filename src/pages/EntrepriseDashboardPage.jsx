@@ -1,4 +1,4 @@
-import { Building2, FileCheck, Users, Euro, AlertCircle, ArrowRight, FolderPlus, TrendingUp, Clock, CheckCircle2, Zap, BarChart3 } from 'lucide-react'
+import { Building2, FileCheck, Users, Euro, AlertCircle, ArrowRight, FolderPlus, TrendingUp, Clock, CheckCircle2, Zap, BarChart3, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useEntrepriseStats, useChantiersSansDossier, useDossiersCEE } from '../hooks/useEntreprise'
@@ -236,6 +236,22 @@ export default function EntrepriseDashboardPage() {
             <div className="text-left">
               <p className="text-white font-medium text-sm">Mes équipes</p>
               <p className="text-zinc-500 text-xs">Voir la performance des équipes</p>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-zinc-500" />
+        </button>
+
+        <button
+          onClick={() => navigate('/entreprise/parametres')}
+          className="w-full flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/30 hover:bg-zinc-800 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+              <Settings className="w-5 h-5 text-orange-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-medium text-sm">Paramètres primes</p>
+              <p className="text-zinc-500 text-xs">Quota et prime par type de travaux</p>
             </div>
           </div>
           <ArrowRight className="w-5 h-5 text-zinc-500" />
