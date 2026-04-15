@@ -121,7 +121,7 @@ export default function EntrepriseDashboardPage() {
       )}
 
       {/* Pipeline des dossiers */}
-      {totalDossiers > 0 && (
+      {totalDossiers > 0 && (<>
 <Card className="p-4">
           <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
             <Zap className="w-4 h-4 text-orange-400" />
@@ -142,6 +142,7 @@ export default function EntrepriseDashboardPage() {
             </div>
           </div>
         </Card>
+        </>
 
         <Card className="p-4">
           <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
