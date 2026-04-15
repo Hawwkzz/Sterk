@@ -11,6 +11,20 @@ export const ZONES_CLIMATIQUES = [
   { value: 'H3', label: 'H3 - Méditerranée' },
 ]
 
+// Catégories de ménage (précarité énergétique)
+// Coef "Coup de pouce" pour valorisation précarité énergétique
+export const CATEGORIES_MENAGE = [
+  { value: 'classique', label: 'Classique (hors précarité)', coef: 1 },
+  { value: 'modeste', label: 'Ménage modeste', coef: 1.5 },
+  { value: 'grande_precarite', label: 'Ménage grande précarité', coef: 2 },
+]
+
+export function getCoefPrecarite(categorie) {
+  const c = CATEGORIES_MENAGE.find(m => m.value === categorie)
+  return c ? c.coef : 1
+}
+
+
 // ==========================================================
 // BAT-EQ-127 — Luminaires LED tertiaire
 // ==========================================================
@@ -103,6 +117,8 @@ export const FICHES = {
     secteur: 'residentiel',
     description: "Installation d'une pompe à chaleur air/eau dans un bâtiment résidentiel existant (> 2 ans).",
     fields: [
+      { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
+        options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
       { key: 'type_logement', label: 'Type de logement', type: 'select',
         options: [{ value: 'maison', label: 'Maison individuelle' }, { value: 'appartement', label: 'Appartement' }],
         required: true },
@@ -132,7 +148,8 @@ export const FICHES = {
         tranche = surface < 35 ? '<35' : surface <= 60 ? '35-60' : '>60'
       }
       const cumac = BAR_TH_171_TABLE[type]?.[palier]?.[zone]?.[tranche] || 0
-      return { kwh_cumac: cumac, palier_etas: palier, tranche_surface: tranche }
+      const coef = getCoefPrecarite(d.categorie_menage)
+      return { kwh_cumac: Math.round(cumac * coef), palier_etas: palier, tranche_surface: tranche, coef_precarite: coef, categorie_menage: d.categorie_menage }
     },
   },
 
@@ -142,6 +159,8 @@ export const FICHES = {
     secteur: 'residentiel',
     description: "Installation d'une pompe à chaleur air/air (climatisation réversible) en résidentiel existant.",
     fields: [
+      { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
+        options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
       { key: 'zone_climatique', label: 'Zone climatique', type: 'select', options: ZONES_CLIMATIQUES, required: true },
       { key: 'surface_chauffee_m2', label: 'Surface chauffée (m²)', type: 'number', required: true, min: 1 },
       { key: 'marque', label: 'Marque', type: 'text', required: true },
@@ -155,7 +174,8 @@ export const FICHES = {
       const surface = Number(d.surface_chauffee_m2) || 0
       if (!zone || !surface) return null
       const coef = COEF_PAC_AIR_AIR[zone]
-      return { kwh_cumac: Math.round(coef * (surface / 100)), coef_zone: coef }
+      const coefPrec = getCoefPrecarite(d.categorie_menage)
+      return { kwh_cumac: Math.round(coef * (surface / 100) * coefPrec), coef_zone: coef, coef_precarite: coefPrec, categorie_menage: d.categorie_menage }
     },
   },
 
@@ -165,6 +185,8 @@ export const FICHES = {
     secteur: 'residentiel',
     description: "Isolation de combles perdus ou rampants de toiture dans un bâtiment résidentiel.",
     fields: [
+      { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
+        options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
       { key: 'zone_climatique', label: 'Zone climatique', type: 'select', options: ZONES_CLIMATIQUES, required: true },
       { key: 'surface_isolee_m2', label: 'Surface isolée (m²)', type: 'number', required: true, min: 1 },
       { key: 'resistance_thermique', label: 'Résistance thermique R (m².K/W) ≥ 7', type: 'number', required: true, min: 7, step: 0.1 },
@@ -177,7 +199,8 @@ export const FICHES = {
       const s = Number(d.surface_isolee_m2) || 0
       if (!zone || !s) return null
       const coefs = { H1: 1600, H2: 1300, H3: 900 } // kWh cumac / m² (maison indiv., indicatif)
-      return { kwh_cumac: Math.round((coefs[zone] || 0) * s) }
+      const coefPrec = getCoefPrecarite(d.categorie_menage)
+      return { kwh_cumac: Math.round((coefs[zone] || 0) * s * coefPrec), coef_precarite: coefPrec, categorie_menage: d.categorie_menage }
     },
   },
 
@@ -187,6 +210,8 @@ export const FICHES = {
     secteur: 'residentiel',
     description: "Installation d'un système solaire combiné (chauffage + eau chaude sanitaire).",
     fields: [
+      { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
+        options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
       { key: 'zone_climatique', label: 'Zone climatique', type: 'select', options: ZONES_CLIMATIQUES, required: true },
       { key: 'surface_capteurs_m2', label: 'Surface capteurs (m²)', type: 'number', required: true, step: 0.1 },
       { key: 'productivite_kwh_m2_an', label: 'Productivité (kWh/m²/an)', type: 'number', required: true },
@@ -199,7 +224,8 @@ export const FICHES = {
       const p = Number(d.productivite_kwh_m2_an) || 0
       if (!s || !p) return null
       // Approximation : cumac ≈ productivité × surface × durée_vie (20 ans)
-      return { kwh_cumac: Math.round(s * p * 20) }
+      const coefPrec = getCoefPrecarite(d.categorie_menage)
+      return { kwh_cumac: Math.round(s * p * 20 * coefPrec), coef_precarite: coefPrec, categorie_menage: d.categorie_menage }
     },
   },
 
