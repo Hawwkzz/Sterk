@@ -287,3 +287,131 @@ export function formatExpiryLabel(dateFacture) {
   if (status === 'warning') return `Expire dans ${daysLeft}j`
   return `Valide ${daysLeft}j`
 }
+
+// ======================================================
+// EXTENSIONS - Prime, Conformité, CSV
+// ======================================================
+
+export const PRIX_KWH_CUMAC_PAR_DELEGATAIRE = {
+  'TotalEnergies': 0.0075,
+  'EDF': 0.0072,
+  'Engie': 0.0070,
+  'Hellio': 0.0080,
+  'Effy': 0.0078,
+  'Sonergia': 0.0074,
+  'GEO PLC': 0.0073,
+  'Geo France Finance': 0.0073,
+  'Leclerc': 0.0068,
+  'Capital Energy': 0.0076,
+  'Vol-V': 0.0070,
+  "Economie d'\u00c9nergie (EDE)": 0.0074,
+  'GreenYellow': 0.0072,
+  'BHC Energy': 0.0075,
+  'Certinergy': 0.0073,
+  'Autre': 0.0072,
+}
+
+export const PRIX_KWH_CUMAC_DEFAULT = 0.0072
+
+export function estimatePrime(kwh_cumac, delegataire) {
+  if (!kwh_cumac) return 0
+  const prix = PRIX_KWH_CUMAC_PAR_DELEGATAIRE[delegataire] ?? PRIX_KWH_CUMAC_DEFAULT
+  return Math.round(kwh_cumac * prix * 100) / 100
+}
+
+export function checkConformity(fiche_code, data) {
+  const issues = []
+  if (!fiche_code || !data) return issues
+  const d = data
+
+  if (fiche_code === 'BAT-EQ-127') {
+    if (d.flux_lumineux_lm && Number(d.flux_lumineux_lm) < 3000)
+      issues.push({ level: 'error', field: 'flux_lumineux_lm', message: 'Flux lumineux < 3000 lm (non \u00e9ligible)' })
+    if (d.efficacite_lm_w && Number(d.efficacite_lm_w) < 90)
+      issues.push({ level: 'error', field: 'efficacite_lm_w', message: 'Efficacit\u00e9 < 90 lm/W (non \u00e9ligible)' })
+    if (d.duree_vie_h && Number(d.duree_vie_h) < 35000)
+      issues.push({ level: 'error', field: 'duree_vie_h', message: 'Dur\u00e9e de vie < 35 000 h (non \u00e9ligible)' })
+    if (d.facteur_puissance && Number(d.facteur_puissance) <= 0.9)
+      issues.push({ level: 'error', field: 'facteur_puissance', message: 'Facteur de puissance \u2264 0,9 (non \u00e9ligible)' })
+    if (d.thd_percent && Number(d.thd_percent) >= 25)
+      issues.push({ level: 'error', field: 'thd_percent', message: 'THD \u2265 25% (non \u00e9ligible)' })
+    if (d.groupe_risque && d.groupe_risque !== '0' && d.groupe_risque !== '1')
+      issues.push({ level: 'warning', field: 'groupe_risque', message: 'Groupe de risque photobiologique doit \u00eatre 0 ou 1' })
+  }
+
+  if (fiche_code === 'BAR-TH-171') {
+    if (d.etas_percent && Number(d.etas_percent) < 111)
+      issues.push({ level: 'error', field: 'etas_percent', message: 'ETAS < 111% (non \u00e9ligible)' })
+    if (d.residence_principale === false)
+      issues.push({ level: 'warning', field: 'residence_principale', message: 'Non r\u00e9sidence principale : v\u00e9rifier \u00e9ligibilit\u00e9' })
+    if (d.batiment_plus_2_ans === false)
+      issues.push({ level: 'error', field: 'batiment_plus_2_ans', message: 'B\u00e2timent < 2 ans (non \u00e9ligible \u00e0 BAR-TH-171)' })
+  }
+
+  if (fiche_code === 'BAR-TH-129') {
+    if (d.scop && Number(d.scop) < 3.9)
+      issues.push({ level: 'error', field: 'scop', message: 'SCOP < 3,9 (non \u00e9ligible)' })
+  }
+
+  if (fiche_code === 'BAR-EN-101') {
+    if (d.resistance_thermique && Number(d.resistance_thermique) < 7)
+      issues.push({ level: 'error', field: 'resistance_thermique', message: 'R < 7 m\u00b2.K/W (non \u00e9ligible)' })
+  }
+
+  const f = FICHES[fiche_code]
+  if (f) {
+    f.fields.forEach(field => {
+      if (field.required && (d[field.key] === undefined || d[field.key] === '' || d[field.key] === null)) {
+        issues.push({ level: 'warning', field: field.key, message: `Champ requis manquant : ${field.label}` })
+      }
+    })
+  }
+
+  return issues
+}
+
+export function exportDossierCSV(dossier) {
+  const rows = []
+  const esc = (v) => {
+    if (v === null || v === undefined) return ''
+    const s = String(v).replace(/"/g, '""')
+    return /[",;\n]/.test(s) ? `"${s}"` : s
+  }
+  const add = (k, v) => rows.push([esc(k), esc(v)].join(';'))
+
+  const c = dossier.chantier || {}
+  const d = dossier.donnees_techniques || {}
+
+  add('Champ', 'Valeur')
+  add('R\u00e9f\u00e9rence dossier', dossier.reference_externe || dossier.id)
+  add('Statut', dossier.statut)
+  add('D\u00e9l\u00e9gataire', dossier.delegataire || '')
+  add('R\u00e9f\u00e9rence d\u00e9l\u00e9gataire', dossier.reference_delegataire || '')
+  add('Fiche FOS', dossier.fiche_code || '')
+  add('Zone climatique', dossier.zone_climatique || '')
+  add('kWh cumac', dossier.kwh_cumac || '')
+  add('Prime estim\u00e9e (\u20ac)', dossier.montant_prime_estime || '')
+  add('Prime re\u00e7ue (\u20ac)', dossier.montant_prime_recu || '')
+  add('Date accord pr\u00e9alable', dossier.date_accord_prealable || '')
+  add('Date facture', dossier.date_facture || '')
+  add('Date d\u00e9p\u00f4t d\u00e9l\u00e9gataire', dossier.date_depot_delegataire || '')
+  add('Date envoi', dossier.date_envoi || '')
+  add('Date validation', dossier.date_validation || '')
+  add('Client', c.client_name || '')
+  add('Adresse', c.adresse || '')
+  add('Email client', c.client_email || '')
+  add('T\u00e9l\u00e9phone client', c.client_phone || '')
+  Object.entries(d).forEach(([k, v]) => add(`tech.${k}`, v))
+
+  return '\uFEFF' + rows.join('\n')
+}
+
+export function downloadCSV(filename, content) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
