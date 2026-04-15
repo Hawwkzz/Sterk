@@ -223,7 +223,7 @@ export function useEntrepriseEquipes() {
   return { equipes, loading, refetch: fetchEquipes }
 }
 
-export function export function useChantiersSansDossier() {
+export function useChantiersSansDossier() {
   const { entreprise } = useAuth()
   const [chantiers, setChantiers] = useState([])
   const [loading, setLoading] = useState(true)
