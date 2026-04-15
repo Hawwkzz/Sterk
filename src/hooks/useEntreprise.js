@@ -196,49 +196,34 @@ export function useEntrepriseEquipes() {
   const [equipes, setEquipes] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (isDemoMode()) {
-      setEquipes(DEMO_EQUIPES); setLoading(false); return
-    }
-
+  const fetchEquipes = useCallback(async () => {
+    if (isDemoMode()) { setEquipes(DEMO_EQUIPES); setLoading(false); return }
     if (!entreprise?.id) return
-
-    async function fetchEquipes() {
-      try {
-        const { data: equipesData } = await supabase
-          .from('equipes')
-          .select(`
-            id, name, responsable, blocked,
-            secteur:secteurs(slug, label, unit_label, prime_par_unite)
-          `)
-          .eq('entreprise_id', entreprise.id)
-
-        const enriched = await Promise.all((equipesData || []).map(async (eq) => {
-          const { count } = await supabase
-            .from('chantiers')
-            .select('*', { count: 'exact', head: true })
-            .eq('equipe_id', eq.id)
-            .eq('status', 'VALIDE')
-
-          return { ...eq, chantiersValides: count || 0 }
-        }))
-
-        setEquipes(enriched)
-      } catch (err) {
-        console.error('[useEntreprise] Error fetching equipes:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchEquipes()
+    setLoading(true)
+    try {
+      const { data: equipesData } = await supabase
+        .from('equipes')
+        .select(`id, name, responsable, blocked, secteur:secteurs(slug, label, unit_label, prime_par_unite)`)
+        .eq('entreprise_id', entreprise.id)
+      const enriched = await Promise.all((equipesData || []).map(async (eq) => {
+        const { count } = await supabase
+          .from('chantiers')
+          .select('*', { count: 'exact', head: true })
+          .eq('equipe_id', eq.id)
+          .eq('status', 'VALIDE')
+        return { ...eq, chantiersValides: count || 0 }
+      }))
+      setEquipes(enriched)
+    } catch (err) { console.error('[useEntreprise] Error fetching equipes:', err) }
+    finally { setLoading(false) }
   }, [entreprise?.id])
 
-  return { equipes, loading }
+  useEffect(() => { fetchEquipes() }, [fetchEquipes])
+
+  return { equipes, loading, refetch: fetchEquipes }
 }
 
-// Hook: chantiers validés sans dossier CEE
-export function useChantiersSansDossier() {
+export function export function useChantiersSansDossier() {
   const { entreprise } = useAuth()
   const [chantiers, setChantiers] = useState([])
   const [loading, setLoading] = useState(true)
