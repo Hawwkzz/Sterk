@@ -185,6 +185,7 @@ export default function EntrepriseDashboardPage() {
             })}
           </div>
         </Card>
+      </>
       )}
 
       {/* Derniers dossiers */}
@@ -227,7 +228,6 @@ export default function EntrepriseDashboardPage() {
             })}
           </div>
         </Card>
-        </>
       )}
 
       {/* Accès rapide */}
