@@ -146,7 +146,23 @@ export function AuthProvider({ children }) {
             )
 
             if (!secteurError && secteurData) {
-              setSecteur(secteurData)
+              let effectiveSecteur = { ...secteurData }
+              if (equipeData.entreprise_id) {
+                const { data: paramData } = await withTimeout(
+                  supabase
+                    .from('entreprise_secteur_params')
+                    .select('prime_par_unite, quota_mensuel')
+                    .eq('entreprise_id', equipeData.entreprise_id)
+                    .eq('secteur_id', equipeData.secteur_id)
+                    .maybeSingle(),
+                  10000
+                )
+                if (paramData) {
+                  if (paramData.prime_par_unite !== null) effectiveSecteur.prime_par_unite = paramData.prime_par_unite
+                  if (paramData.quota_mensuel !== null) effectiveSecteur.quota_mensuel = paramData.quota_mensuel
+                }
+              }
+              setSecteur(effectiveSecteur)
             }
           }
         }
