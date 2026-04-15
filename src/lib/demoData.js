@@ -4,7 +4,17 @@
 import { STATUTS, CEE_STATUTS, SECTEUR_DEFAUT } from './constants'
 
 // Helper : photos Picsum (fiables, stables, seedées)
-const PHOTO = (seed) => `https://picsum.photos/seed/${encodeURIComponent(seed)}/800/600`
+// Photos Unsplash – thèmes chantiers énergétiques RGE
+const P = {
+  led_av:     'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop&q=80',
+  travaux:    'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=600&h=400&fit=crop&q=80',
+  parking_av: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&h=400&fit=crop&q=80',
+  toiture_av: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&h=400&fit=crop&q=80',
+  led_ap:     'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&h=400&fit=crop&q=80',
+  solaire:    'https://images.unsplash.com/photo-1509391366360-2e959784a276?w=600&h=400&fit=crop&q=80',
+  pac:        'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&h=400&fit=crop&q=80',
+  irve:       'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=600&h=400&fit=crop&q=80',
+}
 
 // ---- Profils / entités « utilisateur » fictives ----
 
@@ -108,10 +118,10 @@ export const DEMO_CHANTIERS = [
     equipe_id: 'demo-equipe-001',
     equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p1a', url: PHOTO('office-ceiling-old'), photo_type: 'before', created_at: '2026-03-15T09:00:00Z' },
-      { id: 'p1b', url: PHOTO('office-hallway-fluo'), photo_type: 'before', created_at: '2026-03-15T09:05:00Z' },
-      { id: 'p1c', url: PHOTO('office-led-bright'), photo_type: 'after', created_at: '2026-03-15T17:00:00Z' },
-      { id: 'p1d', url: PHOTO('modern-led-ceiling'), photo_type: 'after', created_at: '2026-03-15T17:15:00Z' },
+      { id: 'p1a', url: P.led_av, photo_type: 'before', created_at: '2026-03-15T09:00:00Z' },
+      { id: 'p1b', url: P.travaux, photo_type: 'before', created_at: '2026-03-15T09:05:00Z' },
+      { id: 'p1c', url: P.led_ap, photo_type: 'after', created_at: '2026-03-15T17:00:00Z' },
+      { id: 'p1d', url: P.led_ap, photo_type: 'after', created_at: '2026-03-15T17:15:00Z' },
     ],
     documents: [],
     refus: [],
@@ -130,10 +140,10 @@ export const DEMO_CHANTIERS = [
     equipe_id: 'demo-equipe-001',
     equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p2a', url: PHOTO('parking-night-old'), photo_type: 'before' },
-      { id: 'p2b', url: PHOTO('parking-empty-dark'), photo_type: 'before' },
-      { id: 'p2c', url: PHOTO('parking-led-bright'), photo_type: 'after' },
-      { id: 'p2d', url: PHOTO('shop-sign-led'), photo_type: 'after' },
+      { id: 'p2a', url: P.parking_av, photo_type: 'before' },
+      { id: 'p2b', url: P.parking_av, photo_type: 'before' },
+      { id: 'p2c', url: P.led_ap, photo_type: 'after' },
+      { id: 'p2d', url: P.led_ap, photo_type: 'after' },
     ],
     documents: [],
     refus: [],
@@ -152,10 +162,10 @@ export const DEMO_CHANTIERS = [
     equipe_id: 'demo-equipe-001',
     equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p3a', url: PHOTO('old-boiler-basement'), photo_type: 'before' },
-      { id: 'p3b', url: PHOTO('fuel-tank-removal'), photo_type: 'before' },
-      { id: 'p3c', url: PHOTO('heat-pump-outdoor'), photo_type: 'after' },
-      { id: 'p3d', url: PHOTO('pac-installation'), photo_type: 'after' },
+      { id: 'p3a', url: P.travaux, photo_type: 'before' },
+      { id: 'p3b', url: P.travaux, photo_type: 'before' },
+      { id: 'p3c', url: P.pac, photo_type: 'after' },
+      { id: 'p3d', url: P.pac, photo_type: 'after' },
     ],
     documents: [],
     refus: [],
@@ -174,10 +184,10 @@ export const DEMO_CHANTIERS = [
     equipe_id: 'demo-equipe-001',
     equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p4a', url: PHOTO('barn-roof-before'), photo_type: 'before' },
-      { id: 'p4b', url: PHOTO('rural-farm-roof'), photo_type: 'before' },
-      { id: 'p4c', url: PHOTO('solar-panels-roof'), photo_type: 'after' },
-      { id: 'p4d', url: PHOTO('solar-installation'), photo_type: 'after' },
+      { id: 'p4a', url: P.toiture_av, photo_type: 'before' },
+      { id: 'p4b', url: P.toiture_av, photo_type: 'before' },
+      { id: 'p4c', url: P.solaire, photo_type: 'after' },
+      { id: 'p4d', url: P.solaire, photo_type: 'after' },
     ],
     documents: [],
     refus: [],
@@ -196,10 +206,10 @@ export const DEMO_CHANTIERS = [
     equipe_id: 'demo-equipe-001',
     equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p5a', url: PHOTO('empty-parking-spots'), photo_type: 'before' },
-      { id: 'p5b', url: PHOTO('parking-ground-work'), photo_type: 'before' },
-      { id: 'p5c', url: PHOTO('ev-charging-station'), photo_type: 'after' },
-      { id: 'p5d', url: PHOTO('ev-charger-installed'), photo_type: 'after' },
+      { id: 'p5a', url: P.parking_av, photo_type: 'before' },
+      { id: 'p5b', url: P.travaux, photo_type: 'before' },
+      { id: 'p5c', url: P.irve, photo_type: 'after' },
+      { id: 'p5d', url: P.irve, photo_type: 'after' },
     ],
     documents: [],
     refus: [],
@@ -218,10 +228,10 @@ export const DEMO_CHANTIERS = [
     equipe_id: 'demo-equipe-001',
     equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p6a', url: PHOTO('bakery-interior-old'), photo_type: 'before' },
-      { id: 'p6b', url: PHOTO('bakery-counter-dim'), photo_type: 'before' },
-      { id: 'p6c', url: PHOTO('bakery-bright-led'), photo_type: 'after' },
-      { id: 'p6d', url: PHOTO('bakery-showcase-led'), photo_type: 'after' },
+      { id: 'p6a', url: P.led_av, photo_type: 'before' },
+      { id: 'p6b', url: P.travaux, photo_type: 'before' },
+      { id: 'p6c', url: P.led_ap, photo_type: 'after' },
+      { id: 'p6d', url: P.led_ap, photo_type: 'after' },
     ],
     documents: [],
     refus: [],
@@ -240,12 +250,12 @@ export const DEMO_CHANTIERS = [
     equipe_id: 'demo-equipe-001',
     equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo', responsable: 'Thomas Lemaire' },
     photos: [
-      { id: 'p7a', url: PHOTO('house-basement'), photo_type: 'before' },
+      { id: 'p7a', url: P.travaux, photo_type: 'before' },
     ],
     documents: [],
     refus: [
       { id: 'r1', commentaire: 'Il manque les photos APRES travaux (unité extérieure + arrivée chauffage).', created_at: '2026-04-14T15:00:00Z', photos: [
-        { id: 'rp1', url: PHOTO('refus-photo-missing') },
+        { id: 'rp1', url: P.travaux },
       ] },
     ],
   },
@@ -270,10 +280,10 @@ export const DEMO_DOSSIERS_CEE = [
       equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
     },
     documents: [
-      { id: 'd1', type_document: 'ATTESTATION_HONNEUR', nom: 'attestation.pdf', url: '#', valide: true },
-      { id: 'd2', type_document: 'FACTURE', nom: 'facture-001.pdf', url: '#', valide: true },
-      { id: 'd3', type_document: 'PHOTO_AVANT', nom: 'avant.jpg', url: PHOTO('office-ceiling-old'), valide: true },
-      { id: 'd4', type_document: 'PHOTO_APRES', nom: 'apres.jpg', url: PHOTO('office-led-bright'), valide: true },
+      { id: 'd1', type_document: 'ATTESTATION_HONNEUR', nom: 'attestation.pdf', url: null, valide: true },
+      { id: 'd2', type_document: 'FACTURE', nom: 'facture-001.pdf', url: null, valide: true },
+      { id: 'd3', type_document: 'PHOTO_AVANT', nom: 'avant.jpg', url: P.led_av, valide: true },
+      { id: 'd4', type_document: 'PHOTO_APRES', nom: 'apres.jpg', url: P.led_ap, valide: true },
     ],
   },
   {
@@ -292,9 +302,9 @@ export const DEMO_DOSSIERS_CEE = [
       equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
     },
     documents: [
-      { id: 'd5', type_document: 'DEVIS', nom: 'devis-signe.pdf', url: '#', valide: true },
-      { id: 'd6', type_document: 'FACTURE', nom: 'facture-002.pdf', url: '#', valide: true },
-      { id: 'd7', type_document: 'FICHE_TECHNIQUE', nom: 'fiche-tech.pdf', url: '#', valide: true },
+      { id: 'd5', type_document: 'DEVIS', nom: 'devis-signe.pdf', url: null, valide: true },
+      { id: 'd6', type_document: 'FACTURE', nom: 'facture-002.pdf', url: null, valide: true },
+      { id: 'd7', type_document: 'FICHE_TECHNIQUE', nom: 'fiche-tech.pdf', url: null, valide: true },
     ],
   },
   {
@@ -313,9 +323,9 @@ export const DEMO_DOSSIERS_CEE = [
       equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
     },
     documents: [
-      { id: 'd8', type_document: 'ATTESTATION_HONNEUR', nom: 'attestation-pac.pdf', url: '#', valide: true },
-      { id: 'd9', type_document: 'FICHE_TECHNIQUE', nom: 'fiche-pac-14kw.pdf', url: '#', valide: true },
-      { id: 'd10', type_document: 'FACTURE', nom: 'facture-pac.pdf', url: '#', valide: true },
+      { id: 'd8', type_document: 'ATTESTATION_HONNEUR', nom: 'attestation-pac.pdf', url: null, valide: true },
+      { id: 'd9', type_document: 'FICHE_TECHNIQUE', nom: 'fiche-pac-14kw.pdf', url: null, valide: true },
+      { id: 'd10', type_document: 'FACTURE', nom: 'facture-pac.pdf', url: null, valide: true },
     ],
   },
   {
@@ -334,7 +344,7 @@ export const DEMO_DOSSIERS_CEE = [
       equipe: { id: 'demo-equipe-001', name: 'Équipe Nord - Démo' },
     },
     documents: [
-      { id: 'd11', type_document: 'PHOTO_AVANT', nom: 'avant.jpg', url: PHOTO('bakery-interior-old'), valide: true },
+      { id: 'd11', type_document: 'PHOTO_AVANT', nom: 'avant.jpg', url: P.led_av, valide: true },
     ],
   },
 ]
