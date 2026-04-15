@@ -2,6 +2,7 @@ import { Building2, FileCheck, Users, Euro, AlertCircle, ArrowRight, FolderPlus,
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useEntrepriseStats, useChantiersSansDossier, useDossiersCEE } from '../hooks/useEntreprise'
+import { computeExpiryStatus, FICHES } from '../lib/cee'
 import { Card, Badge, Spinner, Button } from '../components/ui'
 import { CEE_STATUT_CONFIG, CEE_STATUTS } from '../lib/constants'
 import { formatCurrency } from '../lib/utils'
@@ -121,7 +122,72 @@ export default function EntrepriseDashboardPage() {
 
       {/* Pipeline des dossiers */}
       {totalDossiers > 0 && (
-        <Card className="p-4">
+<Card className="p-4">
+          <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-orange-400" />
+            Performance CEE
+          </h3>
+          {(() => {
+            const list = recentDossiers || []
+            const totalKwh = list.reduce((s, d) => s + (Number(d.kwh_cumac) || 0), 0)
+            const totalPrime = list.reduce((s, d) => s + (Number(d.montant_prime_estime) || 0), 0)
+            const parFiche = list.reduce((acc, d) => {
+              if (!d.fiche_code) return acc
+              acc[d.fiche_code] = (acc[d.fiche_code] || 0) + (Number(d.kwh_cumac) || 0)
+              return acc
+            }, {})
+            const fichesSorted = Object.entries(parFiche).sort((a, b) => b[1] - a[1]).slice(0, 4)
+            const nearExpiry = list.filter(d => {
+              const st = computeExpiryStatus(d.date_facture)
+              return st.status === 'critical' || st.status === 'warning'
+            }).length
+            const expired = list.filter(d => computeExpiryStatus(d.date_facture).status === 'expired').length
+            return (
+              <>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-600/20 border border-orange-500/30">
+                    <p className="text-zinc-400 text-[10px]">Total kWh cumac</p>
+                    <p className="text-orange-400 font-black text-lg">{totalKwh.toLocaleString('fr-FR')}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-600/20 border border-emerald-500/30">
+                    <p className="text-zinc-400 text-[10px]">Prime estimée (€)</p>
+                    <p className="text-emerald-400 font-black text-lg">{totalPrime.toLocaleString('fr-FR', {maximumFractionDigits: 0})}</p>
+                  </div>
+                </div>
+                {fichesSorted.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    <p className="text-zinc-400 text-[10px] uppercase tracking-wide">Répartition par fiche</p>
+                    {fichesSorted.map(([code, kwh]) => {
+                      const pct = totalKwh > 0 ? (kwh / totalKwh) * 100 : 0
+                      return (
+                        <div key={code}>
+                          <div className="flex justify-between text-[11px] mb-0.5">
+                            <span className="text-zinc-300 font-medium">{code}</span>
+                            <span className="text-zinc-400">{kwh.toLocaleString('fr-FR')} kWh</span>
+                          </div>
+                          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500" style={{width: `${pct}%`}} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {(nearExpiry > 0 || expired > 0) && (
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 mt-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-300">
+                      {expired > 0 && <>{expired} dossier(s) expiré(s). </>}
+                      {nearExpiry > 0 && <>{nearExpiry} proche(s) de l'expiration.</>}
+                    </p>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+        </Card>
+
+                <Card className="p-4">
           <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-orange-400" />
             Pipeline dossiers
