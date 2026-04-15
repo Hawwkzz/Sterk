@@ -13,6 +13,8 @@ import { CEE_STATUT_CONFIG, CEE_STATUTS, CEE_DOCUMENT_TYPES, DELEGATAIRES } from
 import { formatDate, formatCurrency } from '../lib/utils'
 import { generateDossierCEEPDF, downloadPDF } from '../lib/pdf'
 import toast from 'react-hot-toast'
+import FicheOperationForm from '../components/FicheOperationForm'
+import { computeExpiryStatus } from '../lib/cee'
 
 const STATUT_FLOW = [
   CEE_STATUTS.A_COMPLETER,
@@ -37,6 +39,8 @@ export default function DossierCEEDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [importing, setImporting] = useState(null)
   const [downloadingPDF, setDownloadingPDF] = useState(false)
+  const [savingTech, setSavingTech] = useState(false)
+  const [techDraft, setTechDraft] = useState(null)
   const [activeTab, setActiveTab] = useState('documents') // 'documents' | 'equipe'
   const fileInputRef = useRef(null)
 
@@ -121,6 +125,10 @@ export default function DossierCEEDetailPage() {
           montant_prime_estime: editForm.montant_prime_estime || dossier.montant_prime_estime,
           montant_prime_recu: editForm.montant_prime_recu || dossier.montant_prime_recu,
           commentaire: editForm.commentaire ?? dossier.commentaire,
+          reference_delegataire: editForm.reference_delegataire ?? dossier.reference_delegataire,
+          date_accord_prealable: editForm.date_accord_prealable || dossier.date_accord_prealable,
+          date_facture: editForm.date_facture || dossier.date_facture,
+          date_depot_delegataire: editForm.date_depot_delegataire || dossier.date_depot_delegataire,
           updated_at: new Date().toISOString(),
         })
         .eq('id', dossier.id)
@@ -351,6 +359,10 @@ export default function DossierCEEDetailPage() {
       montant_prime_estime: dossier.montant_prime_estime || '',
       montant_prime_recu: dossier.montant_prime_recu || '',
       commentaire: dossier.commentaire || '',
+      reference_delegataire: dossier.reference_delegataire || '',
+      date_accord_prealable: dossier.date_accord_prealable || '',
+      date_facture: dossier.date_facture || '',
+      date_depot_delegataire: dossier.date_depot_delegataire || '',
     })
     setShowEditModal(true)
   }
@@ -797,6 +809,48 @@ export default function DossierCEEDetailPage() {
         </div>
       )}
 
+      {/* Alerte échéance 12 mois */}
+      {(() => {
+        const e = computeExpiryStatus(dossier.date_facture)
+        if (e.status === 'unknown' || e.status === 'ok') return null
+        const colors = {
+          expired: 'bg-red-500/20 border-red-500/30 text-red-300',
+          critical: 'bg-red-500/20 border-red-500/30 text-red-300',
+          warning: 'bg-amber-500/20 border-amber-500/30 text-amber-300',
+        }
+        const labels = {
+          expired: `⚠️ Dossier expiré depuis ${Math.abs(e.daysLeft)} jours (délai réglementaire 12 mois dépassé)`,
+          critical: `⚠️ Échéance critique : ${e.daysLeft} jours restants avant expiration`,
+          warning: `⚠️ Échéance proche : ${e.daysLeft} jours restants`,
+        }
+        return <div className={`p-3 rounded-xl border text-xs ${colors[e.status]}`}>{labels[e.status]}</div>
+      })()}
+
+      {/* Fiche d'opération standardisée (kWh cumac) */}
+      <FicheOperationForm
+        value={techDraft ?? { fiche_code: dossier.fiche_code, donnees_techniques: dossier.donnees_techniques, kwh_cumac: dossier.kwh_cumac, zone_climatique: dossier.zone_climatique }}
+        onChange={(v) => setTechDraft(v)}
+        saving={savingTech}
+        onSave={async () => {
+          setSavingTech(true)
+          try {
+            const v = techDraft ?? { fiche_code: dossier.fiche_code, donnees_techniques: dossier.donnees_techniques, kwh_cumac: dossier.kwh_cumac, zone_climatique: dossier.zone_climatique }
+            const { error } = await supabase.from('dossiers_cee').update({
+              fiche_code: v.fiche_code,
+              donnees_techniques: v.donnees_techniques,
+              kwh_cumac: v.kwh_cumac,
+              zone_climatique: v.zone_climatique,
+              updated_at: new Date().toISOString(),
+            }).eq('id', dossier.id)
+            if (error) throw error
+            toast.success('Données techniques enregistrées')
+            setTechDraft(null)
+            refetch()
+          } catch (err) { toast.error('Erreur: ' + err.message) }
+          finally { setSavingTech(false) }
+        }}
+      />
+
       {/* === TÉLÉCHARGEMENT DOSSIER COMPLET === */}
       <Card className="p-4">
         <Button
@@ -900,6 +954,30 @@ export default function DossierCEEDetailPage() {
             value={editForm.montant_prime_recu || ''}
             onChange={e => setEditForm({ ...editForm, montant_prime_recu: e.target.value })}
             placeholder="0.00"
+          />
+          <Input
+            label="Référence délégataire"
+            value={editForm.reference_delegataire || ''}
+            onChange={e => setEditForm({ ...editForm, reference_delegataire: e.target.value })}
+            placeholder="N° interne chez le délégataire"
+          />
+          <Input
+            label="Date d'accord préalable"
+            type="date"
+            value={editForm.date_accord_prealable || ''}
+            onChange={e => setEditForm({ ...editForm, date_accord_prealable: e.target.value })}
+          />
+          <Input
+            label="Date de facture"
+            type="date"
+            value={editForm.date_facture || ''}
+            onChange={e => setEditForm({ ...editForm, date_facture: e.target.value })}
+          />
+          <Input
+            label="Date dépôt délégataire"
+            type="date"
+            value={editForm.date_depot_delegataire || ''}
+            onChange={e => setEditForm({ ...editForm, date_depot_delegataire: e.target.value })}
           />
           <Textarea
             label="Commentaire"
