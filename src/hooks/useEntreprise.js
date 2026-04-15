@@ -290,3 +290,88 @@ export function useChantiersSansDossier() {
 
   return { chantiers, loading, refetch: fetch }
 }
+
+// Hook: configuration des primes par secteur pour l'entreprise
+export function useEntrepriseParamsPrimes() {
+  const { entreprise } = useAuth()
+  const [secteurs, setSecteurs] = useState([])
+  const [params, setParams] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(null)
+
+  useEffect(() => {
+    if (isDemoMode()) {
+      setSecteurs([
+        { id: 'demo-led', slug: 'led', label: 'LED Relamping', unit_label: 'LED', quota_mensuel: 1200, prime_par_unite: 5 },
+        { id: 'demo-pac', slug: 'pac', label: 'Pompe à Chaleur', unit_label: 'PAC', quota_mensuel: 8, prime_par_unite: 200 },
+        { id: 'demo-pv', slug: 'pv', label: 'Photovoltaïque', unit_label: 'panneau', quota_mensuel: 5, prime_par_unite: 300 },
+        { id: 'demo-irve', slug: 'irve', label: 'Bornes IRVE', unit_label: 'borne', quota_mensuel: 10, prime_par_unite: 80 },
+      ])
+      setParams({})
+      setLoading(false)
+      return
+    }
+
+    if (!entreprise?.id) return
+
+    async function fetchData() {
+      try {
+        const { data: secteursData } = await supabase
+          .from('secteurs')
+          .select('id, slug, label, unit_label, quota_mensuel, prime_par_unite')
+          .order('slug')
+
+        const { data: paramsData } = await supabase
+          .from('entreprise_secteur_params')
+          .select('secteur_id, prime_par_unite, quota_mensuel')
+          .eq('entreprise_id', entreprise.id)
+
+        const paramsMap = {}
+        ;(paramsData || []).forEach(p => {
+          paramsMap[p.secteur_id] = { prime_par_unite: p.prime_par_unite, quota_mensuel: p.quota_mensuel }
+        })
+
+        setSecteurs(secteursData || [])
+        setParams(paramsMap)
+      } catch (err) {
+        console.error('[useEntrepriseParamsPrimes]', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [entreprise?.id])
+
+  const saveParam = async (secteurId, prime_par_unite, quota_mensuel) => {
+    if (isDemoMode()) return { success: true }
+    if (!entreprise?.id) return { success: false }
+
+    setSaving(secteurId)
+    try {
+      const { error } = await supabase
+        .from('entreprise_secteur_params')
+        .upsert(
+          { entreprise_id: entreprise.id, secteur_id: secteurId, prime_par_unite: parseFloat(prime_par_unite), quota_mensuel: parseInt(quota_mensuel) },
+          { onConflict: 'entreprise_id,secteur_id' }
+        )
+
+      if (error) throw error
+      setParams(prev => ({ ...prev, [secteurId]: { prime_par_unite, quota_mensuel } }))
+      return { success: true }
+    } catch (err) {
+      console.error('[saveParam]', err)
+      return { success: false, error: err }
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const getEffectiveValues = (secteur) => ({
+    prime_par_unite: params[secteur.id]?.prime_par_unite ?? secteur.prime_par_unite,
+    quota_mensuel: params[secteur.id]?.quota_mensuel ?? secteur.quota_mensuel,
+    hasOverride: !!params[secteur.id],
+  })
+
+  return { secteurs, params, loading, saving, saveParam, getEffectiveValues }
+}
