@@ -478,6 +478,48 @@ export async function generateDossierCEEPDF(dossier, entreprise) {
   yPos += 10
 
   // =============================================
+  // DONNÉES TECHNIQUES FOS
+  // =============================================
+  if (dossier.fiche_code) {
+    checkPageBreak(40)
+    doc.setFillColor(249, 115, 22)
+    doc.rect(margin, yPos, contentWidth, 8, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text('DONNÉES TECHNIQUES FOS', margin + 2, yPos + 5.5)
+    yPos += 12
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+
+    const techRows = [
+      ['Fiche FOS', dossier.fiche_code || '-'],
+      ['Zone climatique', dossier.zone_climatique || '-'],
+      ['kWh cumac', dossier.kwh_cumac ? Number(dossier.kwh_cumac).toLocaleString('fr-FR') : '-'],
+      ['Prime estimée (€)', dossier.montant_prime_estime ? Number(dossier.montant_prime_estime).toLocaleString('fr-FR', {minimumFractionDigits: 2}) : '-'],
+      ['Date accord préalable', dossier.date_accord_prealable || '-'],
+      ['Date facture', dossier.date_facture || '-'],
+      ['Date dépôt délégataire', dossier.date_depot_delegataire || '-'],
+      ['Référence délégataire', dossier.reference_delegataire || '-'],
+    ]
+    if (dossier.donnees_techniques && typeof dossier.donnees_techniques === 'object') {
+      Object.entries(dossier.donnees_techniques).forEach(([k, v]) => {
+        techRows.push([k, v === true ? 'Oui' : v === false ? 'Non' : String(v ?? '-')])
+      })
+    }
+    autoTable(doc, {
+      startY: yPos,
+      body: techRows,
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 70 }, 1: { cellWidth: 'auto' } },
+      margin: { left: margin, right: margin },
+    })
+    yPos = doc.lastAutoTable.finalY + 8
+  }
+
+  // =============================================
   // CHECKLIST DOCUMENTS
   // =============================================
   yPos = checkPageBreak(doc, yPos, 60)
@@ -573,4 +615,93 @@ export function getPDFBlob(doc) {
 
 export function getPDFBase64(doc) {
   return doc.output('datauristring')
+}
+
+// ==================================================
+// ATTESTATION SUR L'HONNEUR (pré-remplie)
+// ==================================================
+export function generateAttestationHonneurPDF(dossier, entreprise) {
+  const doc = new jsPDF()
+  const margin = 20
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const contentWidth = pageWidth - margin * 2
+  let y = 25
+
+  const c = dossier.chantier || {}
+  const d = dossier.donnees_techniques || {}
+
+  // Title
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(16)
+  doc.setTextColor(20, 20, 20)
+  doc.text("ATTESTATION SUR L'HONNEUR", pageWidth / 2, y, { align: 'center' })
+  y += 6
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(90, 90, 90)
+  doc.text("Dispositif des Certificats d'Économies d'Énergie (CEE)", pageWidth / 2, y, { align: 'center' })
+  y += 12
+
+  // Bénéficiaire
+  doc.setTextColor(20, 20, 20)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.text('BÉNÉFICIAIRE', margin, y); y += 6
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text('Nom / Raison sociale : ' + (c.client_name || '___________________________'), margin, y); y += 5
+  doc.text('Adresse des travaux : ' + (c.adresse || '___________________________'), margin, y); y += 5
+  doc.text('Email : ' + (c.client_email || '___________________________'), margin, y); y += 5
+  doc.text('Téléphone : ' + (c.client_phone || '___________________________'), margin, y); y += 10
+
+  // Opération
+  doc.setFont('helvetica', 'bold')
+  doc.text('OPÉRATION', margin, y); y += 6
+  doc.setFont('helvetica', 'normal')
+  doc.text('Fiche FOS : ' + (dossier.fiche_code || '___________________________'), margin, y); y += 5
+  doc.text('Zone climatique : ' + (dossier.zone_climatique || '___'), margin, y); y += 5
+  doc.text('Date de facture : ' + (dossier.date_facture || '__________'), margin, y); y += 5
+  doc.text('Volume CEE estimé (kWh cumac) : ' + (dossier.kwh_cumac ? Number(dossier.kwh_cumac).toLocaleString('fr-FR') : '__________'), margin, y); y += 10
+
+  // Déclarations
+  doc.setFont('helvetica', 'bold')
+  doc.text('JE DÉCLARE SUR L\'HONNEUR', margin, y); y += 6
+  doc.setFont('helvetica', 'normal')
+  const declarations = [
+    "- Que les travaux décrits ci-dessus ont bien été réalisés à l'adresse indiquée.",
+    "- Que le matériel installé répond aux exigences techniques de la fiche d'opération standardisée.",
+    "- Que je n'ai pas sollicité plusieurs demandes de CEE pour la même opération.",
+    "- Que je certifie l'exactitude des informations fournies dans le présent dossier.",
+    "- Que j'autorise l'entreprise installatrice à valoriser les CEE générés par l'opération.",
+  ]
+  declarations.forEach(line => {
+    const split = doc.splitTextToSize(line, contentWidth)
+    doc.text(split, margin, y)
+    y += split.length * 5
+  })
+  y += 8
+
+  // Entreprise
+  doc.setFont('helvetica', 'bold')
+  doc.text('ENTREPRISE RÉALISATRICE', margin, y); y += 6
+  doc.setFont('helvetica', 'normal')
+  if (entreprise) {
+    doc.text('Raison sociale : ' + (entreprise.nom || ''), margin, y); y += 5
+    if (entreprise.siret) { doc.text('SIRET : ' + entreprise.siret, margin, y); y += 5 }
+    if (entreprise.adresse) { doc.text('Adresse : ' + entreprise.adresse, margin, y); y += 5 }
+    if (entreprise.rge_numero) { doc.text('Qualification RGE : ' + entreprise.rge_numero, margin, y); y += 5 }
+  }
+  y += 10
+
+  // Signatures
+  doc.setFont('helvetica', 'bold')
+  doc.text('Fait à ________________, le ' + new Date().toLocaleDateString('fr-FR'), margin, y); y += 12
+  doc.text('Signature du bénéficiaire :', margin, y)
+  doc.text("Signature de l'entreprise :", pageWidth / 2 + 5, y)
+  y += 25
+  doc.setDrawColor(160, 160, 160)
+  doc.line(margin, y, margin + 70, y)
+  doc.line(pageWidth / 2 + 5, y, pageWidth / 2 + 75, y)
+
+  return doc
 }
