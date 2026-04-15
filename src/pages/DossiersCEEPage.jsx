@@ -8,6 +8,7 @@ import { Card, Badge, Button, Spinner, EmptyState, Modal, Input } from '../compo
 import { CEE_STATUT_CONFIG, CEE_STATUTS } from '../lib/constants'
 import { formatDate } from '../lib/utils'
 import toast from 'react-hot-toast'
+import { computeExpiryStatus } from '../lib/cee'
 
 const FILTER_OPTIONS = [
   { value: '', label: 'Tous' },
@@ -180,6 +181,7 @@ export default function DossiersCEEPage() {
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2">
                       {getStatutBadge(dossier.statut)}
+                      {(() => { const e = computeExpiryStatus(dossier.date_facture); if (e.status === 'unknown' || e.status === 'ok') return null; const colors = { expired: 'bg-red-500/20 text-red-400', critical: 'bg-red-500/20 text-red-400', warning: 'bg-amber-500/20 text-amber-400' }; const labels = { expired: `Expiré +${Math.abs(e.daysLeft)}j`, critical: `${e.daysLeft}j restants`, warning: `${e.daysLeft}j restants` }; return <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${colors[e.status]}`}>⏱️ {labels[e.status]}</span>; })()}
                       {dossier.delegataire && (
                         <span className="text-zinc-600 text-xs">{dossier.delegataire}</span>
                       )}
