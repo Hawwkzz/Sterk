@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Home, FileText, Award, BarChart3, Settings, Zap, LogOut, Shield, FileCheck, Users, Building2, Handshake } from 'lucide-react'
+import { Home, FileText, Award, BarChart3, Settings, Zap, LogOut, Shield, FileCheck, Users, Building2, UserPlus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { cn } from '../lib/utils'
 import DemoBanner from './DemoBanner'
@@ -18,7 +18,7 @@ const adminNavItems = [
 const entrepriseNavItems = [
   { to: '/entreprise', icon: Home, label: 'Accueil' },
   { to: '/entreprise/dossiers', icon: FileCheck, label: 'Dossiers' },
-  { to: '/entreprise/apporteurs', icon: Handshake, label: 'Apporteurs' },
+  { to: '/entreprise/apporteurs', icon: UserPlus, label: 'Apporteurs' },
   { to: '/entreprise/equipes', icon: Users, label: 'Équipes' },
 ]
 
