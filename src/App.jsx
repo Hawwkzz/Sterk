@@ -18,6 +18,7 @@ const DossiersCEEPage = lazy(() => import('./pages/DossiersCEEPage'))
 const DossierCEEDetailPage = lazy(() => import('./pages/DossierCEEDetailPage'))
 const EntrepriseEquipesPage = lazy(() => import('./pages/EntrepriseEquipesPage'))
 const EntrepriseParametresPage = lazy(() => import('./pages/EntrepriseParametresPage'))
+const ApporteursPage = lazy(() => import('./pages/ApporteursPage'))
 
 function ProtectedRoute({ children, adminOnly = false, entrepriseOnly = false }) {
   const { user, loading, isAdmin, isEntreprise } = useAuth()
@@ -81,6 +82,7 @@ export default function App() {
           <Route path="dossiers" element={<DossiersCEEPage />} />
           <Route path="dossiers/:id" element={<DossierCEEDetailPage />} />
           <Route path="equipes" element={<EntrepriseEquipesPage />} />
+          <Route path="apporteurs" element={<ApporteursPage />} />
           <Route path="parametres" element={<EntrepriseParametresPage />} />
         </Route>
 

@@ -74,6 +74,42 @@ const COEF_PAC_AIR_AIR = {
 }
 
 // ==========================================================
+// BAR-TH-174 — PAC air/eau individuelle (maison / appartement)
+// ==========================================================
+// Arrêté du 7 janvier 2026 (vA80-3 effective 17/01/2026)
+// Structure identique à BAR-TH-171 mais valeurs de table mises à jour 2026
+// ⚠️ VALEURS INDICATIVES — à vérifier contre l'arrêté officiel avant production
+const BAR_TH_174_TABLE = {
+  maison: {
+    111: { H1: { '<70': 38500, '70-90': 60200, '>90': 84000 },
+           H2: { '<70': 30000, '70-90': 46900, '>90': 65500 },
+           H3: { '<70': 19500, '70-90': 30400, '>90': 42400 } },
+    126: { H1: { '<70': 48100, '70-90': 75300, '>90': 105000 },
+           H2: { '<70': 37500, '70-90': 58700, '>90': 81900 },
+           H3: { '<70': 24400, '70-90': 38100, '>90': 53000 } },
+  },
+  appartement: {
+    111: { H1: { '<35': 17600, '35-60': 27600, '>60': 38400 },
+           H2: { '<35': 13700, '35-60': 21500, '>60': 30000 },
+           H3: { '<35': 8900, '35-60': 13900, '>60': 19400 } },
+    126: { H1: { '<35': 22000, '35-60': 34500, '>60': 48000 },
+           H2: { '<35': 17200, '35-60': 27000, '>60': 37500 },
+           H3: { '<35': 11100, '35-60': 17500, '>60': 24300 } },
+  },
+}
+
+// ==========================================================
+// BAR-TH-179 — PAC collective (logement collectif / copropriété)
+// ==========================================================
+// Installation d'une PAC collective sur boucle d'eau chaude en copropriété
+// ⚠️ VALEURS INDICATIVES — à vérifier contre l'arrêté officiel
+const BAR_TH_179_COEFS = {
+  H1: 1950,
+  H2: 1520,
+  H3: 990,
+}
+
+// ==========================================================
 // Schémas de formulaire par fiche
 // ==========================================================
 export const FICHES = {
@@ -229,6 +265,111 @@ export const FICHES = {
     },
   },
 
+  'BAR-TH-174': {
+    code: 'BAR-TH-174',
+    label: 'PAC air/eau individuelle — Maison / Appartement',
+    secteur: 'residentiel',
+    description: "Installation d'une pompe à chaleur air/eau individuelle en résidentiel existant (> 2 ans). Fiche mise à jour par arrêté du 7 janvier 2026 — résidences secondaires exclues.",
+    fields: [
+      { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
+        options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
+      { key: 'type_logement', label: 'Type de logement', type: 'select',
+        options: [{ value: 'maison', label: 'Maison individuelle' }, { value: 'appartement', label: 'Appartement' }],
+        required: true },
+      { key: 'zone_climatique', label: 'Zone climatique', type: 'select',
+        options: ZONES_CLIMATIQUES, required: true },
+      { key: 'surface_chauffee_m2', label: 'Surface chauffée (m²)', type: 'number', required: true, min: 1 },
+      { key: 'etas_percent', label: "ETAS (%) — efficacité saisonnière", type: 'number', required: true, min: 111, step: 0.1 },
+      { key: 'energie_remplacee', label: 'Énergie remplacée', type: 'select',
+        options: [
+          { value: 'fioul', label: 'Fioul' },
+          { value: 'gaz', label: 'Gaz' },
+          { value: 'charbon', label: 'Charbon' },
+          { value: 'electricite', label: 'Électricité (coef 1,9 depuis arrêté 7 jan 2026)' },
+        ], required: true },
+      { key: 'marque', label: 'Marque PAC', type: 'text', required: true },
+      { key: 'reference', label: 'Référence PAC', type: 'text', required: true },
+      { key: 'puissance_kw', label: 'Puissance thermique nominale (kW)', type: 'number', required: true, step: 0.1 },
+      { key: 'cop', label: 'COP', type: 'number', required: true, step: 0.01 },
+      { key: 'fluide_frigorigene', label: 'Fluide frigorigène', type: 'text', required: true, placeholder: 'ex: R32' },
+      { key: 'residence_principale', label: 'Résidence principale (obligatoire — RS exclues)', type: 'checkbox' },
+      { key: 'batiment_plus_2_ans', label: 'Bâtiment achevé depuis plus de 2 ans', type: 'checkbox' },
+      { key: 'installateur_rge_qualipac', label: 'Installateur RGE QualiPAC', type: 'checkbox' },
+    ],
+    compute: (d) => {
+      const type = d.type_logement
+      const zone = d.zone_climatique
+      const etas = Number(d.etas_percent) || 0
+      const surface = Number(d.surface_chauffee_m2) || 0
+      if (!type || !zone || !etas || !surface) return null
+      const palier = etas >= 126 ? 126 : 111
+      let tranche
+      if (type === 'maison') {
+        tranche = surface < 70 ? '<70' : surface <= 90 ? '70-90' : '>90'
+      } else {
+        tranche = surface < 35 ? '<35' : surface <= 60 ? '35-60' : '>60'
+      }
+      let cumac = BAR_TH_174_TABLE[type]?.[palier]?.[zone]?.[tranche] || 0
+      // Coef électricité 1,9 (arrêté 7 jan 2026, ex-2,3)
+      if (d.energie_remplacee === 'electricite') cumac = Math.round(cumac * 1.9 / 2.3)
+      const coef = getCoefPrecarite(d.categorie_menage)
+      return {
+        kwh_cumac: Math.round(cumac * coef),
+        palier_etas: palier,
+        tranche_surface: tranche,
+        coef_precarite: coef,
+        categorie_menage: d.categorie_menage,
+        energie_remplacee: d.energie_remplacee,
+      }
+    },
+  },
+
+  'BAR-TH-179': {
+    code: 'BAR-TH-179',
+    label: 'PAC collective — Copropriété / logement collectif',
+    secteur: 'collectif',
+    description: "Installation d'une pompe à chaleur collective sur boucle d'eau chaude en copropriété ou logement collectif existant.",
+    fields: [
+      { key: 'zone_climatique', label: 'Zone climatique', type: 'select', options: ZONES_CLIMATIQUES, required: true },
+      { key: 'nb_logements', label: 'Nombre de logements desservis', type: 'number', required: true, min: 2 },
+      { key: 'surface_totale_m2', label: 'Surface totale chauffée (m²)', type: 'number', required: true, min: 1 },
+      { key: 'etas_percent', label: "ETAS (%) — efficacité saisonnière", type: 'number', required: true, min: 111, step: 0.1 },
+      { key: 'energie_remplacee', label: 'Énergie remplacée', type: 'select',
+        options: [
+          { value: 'fioul', label: 'Fioul' },
+          { value: 'gaz', label: 'Gaz' },
+          { value: 'charbon', label: 'Charbon' },
+          { value: 'electricite', label: 'Électricité' },
+        ], required: true },
+      { key: 'marque', label: 'Marque PAC', type: 'text', required: true },
+      { key: 'reference', label: 'Référence PAC', type: 'text', required: true },
+      { key: 'puissance_kw', label: 'Puissance thermique nominale (kW)', type: 'number', required: true, step: 0.1 },
+      { key: 'cop', label: 'COP', type: 'number', required: true, step: 0.01 },
+      { key: 'fluide_frigorigene', label: 'Fluide frigorigène', type: 'text', required: true, placeholder: 'ex: R32' },
+      { key: 'av_syndic', label: "Accord de l'AG / syndic obtenu", type: 'checkbox' },
+      { key: 'batiment_plus_2_ans', label: 'Bâtiment achevé depuis plus de 2 ans', type: 'checkbox' },
+    ],
+    compute: (d) => {
+      const zone = d.zone_climatique
+      const s = Number(d.surface_totale_m2) || 0
+      const etas = Number(d.etas_percent) || 0
+      if (!zone || !s || !etas) return null
+      const coef = BAR_TH_179_COEFS[zone] || 0
+      // Bonus ETAS ≥ 126
+      const mult = etas >= 126 ? 1.25 : 1
+      let cumac = coef * s * mult
+      // Coef électricité
+      if (d.energie_remplacee === 'electricite') cumac = cumac * 1.9 / 2.3
+      return {
+        kwh_cumac: Math.round(cumac),
+        coef_zone: coef,
+        palier_etas: etas >= 126 ? 126 : 111,
+        nb_logements: Number(d.nb_logements) || 0,
+        energie_remplacee: d.energie_remplacee,
+      }
+    },
+  },
+
   'BAR-EQ-117': {
     code: 'BAR-EQ-117',
     label: 'Borne de recharge IRVE résidentielle',
@@ -377,6 +518,28 @@ export function checkConformity(fiche_code, data) {
   if (fiche_code === 'BAR-TH-129') {
     if (d.scop && Number(d.scop) < 3.9)
       issues.push({ level: 'error', field: 'scop', message: 'SCOP < 3,9 (non \u00e9ligible)' })
+  }
+
+  if (fiche_code === 'BAR-TH-174') {
+    if (d.etas_percent && Number(d.etas_percent) < 111)
+      issues.push({ level: 'error', field: 'etas_percent', message: 'ETAS < 111% (non \u00e9ligible)' })
+    if (d.residence_principale === false)
+      issues.push({ level: 'error', field: 'residence_principale', message: 'R\u00e9sidences secondaires exclues depuis arr\u00eat\u00e9 7 jan 2026' })
+    if (d.batiment_plus_2_ans === false)
+      issues.push({ level: 'error', field: 'batiment_plus_2_ans', message: 'B\u00e2timent < 2 ans (non \u00e9ligible)' })
+    if (d.installateur_rge_qualipac === false)
+      issues.push({ level: 'warning', field: 'installateur_rge_qualipac', message: 'Installateur RGE QualiPAC requis pour PAC air/eau' })
+  }
+
+  if (fiche_code === 'BAR-TH-179') {
+    if (d.etas_percent && Number(d.etas_percent) < 111)
+      issues.push({ level: 'error', field: 'etas_percent', message: 'ETAS < 111% (non \u00e9ligible)' })
+    if (d.av_syndic === false)
+      issues.push({ level: 'warning', field: 'av_syndic', message: 'Accord AG/syndic requis pour op\u00e9ration en copropri\u00e9t\u00e9' })
+    if (d.batiment_plus_2_ans === false)
+      issues.push({ level: 'error', field: 'batiment_plus_2_ans', message: 'B\u00e2timent < 2 ans (non \u00e9ligible)' })
+    if (d.nb_logements && Number(d.nb_logements) < 2)
+      issues.push({ level: 'error', field: 'nb_logements', message: 'Au moins 2 logements requis pour op\u00e9ration collective' })
   }
 
   if (fiche_code === 'BAR-EN-101') {

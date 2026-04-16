@@ -135,16 +135,20 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
   }
 
   async function uploadPhotos(chantierId) {
+    const { extractPhotoMetadata } = await import('../lib/photoMetadata')
     const allPhotos = [
       ...photosBefore.map(p => ({ ...p, type: 'before' })),
       ...photosAfter.map(p => ({ ...p, type: 'after' }))
     ]
     const uploadedPhotos = []
-    
+
     for (const photo of allPhotos) {
+      // Extraction métadonnées EXIF (timestamp + GPS) pour conformité CEE 2026
+      const meta = await extractPhotoMetadata(photo.file)
+
       const fileExt = photo.file.name.split('.').pop()
       const fileName = `${chantierId}/${photo.type}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      
+
       const { error: uploadError } = await supabase.storage
         .from('chantier-photos')
         .upload(fileName, photo.file)
@@ -158,7 +162,15 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
         .from('chantier-photos')
         .getPublicUrl(fileName)
 
-      uploadedPhotos.push({ url: publicUrl, type: photo.type })
+      uploadedPhotos.push({
+        url: publicUrl,
+        type: photo.type,
+        exif_timestamp: meta.timestamp ? meta.timestamp.toISOString() : null,
+        exif_lat: meta.lat,
+        exif_lng: meta.lng,
+        exif_source: meta.source,
+        exif_device: meta.device,
+      })
     }
 
     return uploadedPhotos
@@ -237,6 +249,11 @@ export default function NewChantierModal({ open, onClose, onSuccess }) {
           chantier_id: chantier.id,
           url: p.url,
           photo_type: p.type,
+          exif_timestamp: p.exif_timestamp,
+          exif_lat: p.exif_lat,
+          exif_lng: p.exif_lng,
+          exif_source: p.exif_source,
+          exif_device: p.exif_device,
         }))
 
         await supabase.from('chantier_photos').insert(photoRecords)

@@ -88,7 +88,7 @@ export function useDossierCEE(dossierId) {
             id, adresse, unit_count, client_name, client_email, client_phone,
             status, date_intervention, commentaire,
             equipe:equipes(id, name, responsable),
-            photos:chantier_photos(id, url, photo_type),
+            photos:chantier_photos(id, url, photo_type, exif_timestamp, exif_lat, exif_lng, exif_source, exif_device),
             documents:chantier_documents(id, url, filename, file_type)
           ),
           documents:documents_cee(id, type_document, nom, url, valide, commentaire, created_at, source, source_id)
@@ -276,6 +276,88 @@ export function useChantiersSansDossier() {
   return { chantiers, loading, refetch: fetch }
 }
 
+// ============================================
+// Hook: Apporteurs d'affaires
+// ============================================
+export function useApporteurs() {
+  const { entreprise } = useAuth()
+  const [apporteurs, setApporteurs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetch = useCallback(async () => {
+    if (isDemoMode()) {
+      setApporteurs([
+        { id: 'demo-app-1', nom: 'Jean Dupont', societe: 'Rénov Conseil', email: 'jean@renovconseil.fr', telephone: '0612345678', taux_commission_default: 10, mode_commission: 'pourcentage', actif: true, nb_dossiers: 3, commission_totale: 450, commission_due: 450, commission_payee: 0 },
+        { id: 'demo-app-2', nom: 'Marie Durand', societe: null, email: 'marie.durand@gmail.com', telephone: '0687654321', taux_commission_default: 8, mode_commission: 'pourcentage', actif: true, nb_dossiers: 5, commission_totale: 720, commission_due: 200, commission_payee: 520 },
+      ])
+      setLoading(false); return
+    }
+    if (!entreprise?.id) return
+    setLoading(true)
+    try {
+      const { data, error: err } = await supabase
+        .from('v_apporteurs_recap')
+        .select('*')
+        .eq('entreprise_id', entreprise.id)
+        .order('nom')
+      if (err) throw err
+      setApporteurs(data || [])
+      setError(null)
+    } catch (err) {
+      console.error('[useApporteurs]', err)
+      setError(err.message)
+    } finally { setLoading(false) }
+  }, [entreprise?.id])
+
+  useEffect(() => { fetch() }, [fetch])
+
+  const createApporteur = async (payload) => {
+    if (isDemoMode()) return { success: true }
+    if (!entreprise?.id) return { success: false }
+    try {
+      const { error: err } = await supabase.from('apporteurs_affaires').insert({
+        entreprise_id: entreprise.id,
+        nom: payload.nom,
+        email: payload.email || null,
+        telephone: payload.telephone || null,
+        societe: payload.societe || null,
+        siret: payload.siret || null,
+        taux_commission_default: payload.taux_commission_default ?? 10,
+        mode_commission: payload.mode_commission || 'pourcentage',
+        forfait_default: payload.forfait_default || null,
+        commentaire: payload.commentaire || null,
+      })
+      if (err) throw err
+      await fetch()
+      return { success: true }
+    } catch (err) {
+      console.error('[createApporteur]', err)
+      return { success: false, error: err }
+    }
+  }
+
+  const updateApporteur = async (id, patch) => {
+    if (isDemoMode()) return { success: true }
+    try {
+      const { error: err } = await supabase
+        .from('apporteurs_affaires')
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (err) throw err
+      await fetch()
+      return { success: true }
+    } catch (err) {
+      console.error('[updateApporteur]', err)
+      return { success: false, error: err }
+    }
+  }
+
+  const toggleActif = async (id, actif) => updateApporteur(id, { actif })
+
+  return { apporteurs, loading, error, refetch: fetch, createApporteur, updateApporteur, toggleActif }
+}
+
 // Hook: configuration des primes par secteur pour l'entreprise
 export function useEntrepriseParamsPrimes() {
   const { entreprise } = useAuth()
@@ -358,5 +440,5 @@ export function useEntrepriseParamsPrimes() {
     hasOverride: !!params[secteur.id],
   })
 
-  return { secteurs, params, loading, saving, saveParam, getEffectiveValues }
+  return { secteurs, params, loading, saving, getEffectiveValues, saveParam }
 }

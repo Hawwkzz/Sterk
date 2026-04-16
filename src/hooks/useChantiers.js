@@ -78,7 +78,7 @@ export function useChantier(chantierId) {
     try {
       setLoading(true)
       const { data, error: fetchError } = await withTimeout(
-        supabase.from('chantiers').select(`*, equipe:equipes(id, name, responsable), photos:chantier_photos(id, url, photo_type, created_at), documents:chantier_documents(id, url, filename, file_type, created_at), refus:chantier_refus(id, commentaire, created_at, photos:refus_photos(id, url))`).eq('id', chantierId).single()
+        supabase.from('chantiers').select(`*, equipe:equipes(id, name, responsable), photos:chantier_photos(id, url, photo_type, created_at, exif_timestamp, exif_lat, exif_lng, exif_source, exif_device), documents:chantier_documents(id, url, filename, file_type, created_at), refus:chantier_refus(id, commentaire, created_at, photos:refus_photos(id, url))`).eq('id', chantierId).single()
       )
       if (fetchError) throw fetchError
       setChantier(data)
