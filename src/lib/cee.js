@@ -1,5 +1,6 @@
 // Définitions des Fiches d'Opérations Standardisées (FOS) CEE
 // Sources: arrêtés officiels du Ministère de la Transition Écologique
+// ⚠️  Corrigé avril 2026 — valeurs vérifiées contre les fiches officielles publiées sur ecologie.gouv.fr
 
 // Durée de validité réglementaire d'un dossier CEE : 12 mois après la date de facture
 export const CEE_VALIDITY_MONTHS = 12
@@ -41,68 +42,115 @@ const COEF_LED_TERTIAIRE = {
 // ==========================================================
 // BAR-TH-171 — PAC air/eau résidentiel
 // ==========================================================
-// Tables officielles kWh cumac (ETAS ≥ 126% et ≥ 111%)
-// Sources : Arrêté du 22 décembre 2014 modifié
-const BAR_TH_171_TABLE = {
-  // Maison individuelle, ETAS ≥ 126%
-  maison: {
-    111: { H1: { '<70': 36700, '70-90': 57400, '>90': 80000 },
-           H2: { '<70': 28600, '70-90': 44700, '>90': 62400 },
-           H3: { '<70': 18600, '70-90': 29000, '>90': 40400 } },
-    126: { H1: { '<70': 45900, '70-90': 71800, '>90': 100000 },
-           H2: { '<70': 35800, '70-90': 55900, '>90': 78000 },
-           H3: { '<70': 23300, '70-90': 36300, '>90': 50500 } },
+// Source : fiche officielle ecologie.gouv.fr (vérifiée avril 2026)
+// Formule : Montant = Base_kWhc × Facteur_Surface × Facteur_Zone
+// Paliers ETAS : 111% (basse) et 140% (haute)  —  PAS 126% !
+// Durée de vie conventionnelle : 17 ans
+const BAR_TH_171 = {
+  bases: {
+    appartement: { 111: 48700, 140: 58900 },
+    maison:      { 111: 90900, 140: 109200 },
   },
-  appartement: {
-    111: { H1: { '<35': 16800, '35-60': 26300, '>60': 36600 },
-           H2: { '<35': 13100, '35-60': 20500, '>60': 28600 },
-           H3: { '<35': 8500, '35-60': 13300, '>60': 18500 } },
-    126: { H1: { '<35': 21000, '35-60': 32900, '>60': 45800 },
-           H2: { '<35': 16400, '35-60': 25700, '>60': 35700 },
-           H3: { '<35': 10600, '35-60': 16700, '>60': 23200 } },
+  surfaceFactors: {
+    appartement: [
+      { max: 35, factor: 0.5 },  // S < 35
+      { max: 60, factor: 0.7 },  // 35 ≤ S < 60
+      { max: Infinity, factor: 1 }, // S ≥ 60
+    ],
+    maison: [
+      { max: 70, factor: 0.5 },  // S < 70
+      { max: 90, factor: 0.7 },  // 70 ≤ S < 90
+      { max: Infinity, factor: 1 }, // S ≥ 90
+    ],
   },
+  zoneFactors: { H1: 1.2, H2: 1, H3: 0.7 },
+}
+
+function getSurfaceFactor171(type, surface) {
+  const brackets = BAR_TH_171.surfaceFactors[type]
+  if (!brackets) return 1
+  for (const b of brackets) {
+    if (surface < b.max) return b.factor
+  }
+  return 1
 }
 
 // ==========================================================
 // BAR-TH-129 — PAC air/air résidentiel
 // ==========================================================
-// Formule simplifiée : kWh cumac = coef(zone) × surface_chauffee
-const COEF_PAC_AIR_AIR = {
-  H1: 16800,
-  H2: 13100,
-  H3: 8500,
+// Source : fiche officielle ADEME (calculateur-cee.ademe.fr)
+// Montants FIXES par type de logement, SCOP et zone climatique
+// PAS de formule coefficient × surface !
+const BAR_TH_129_TABLE = {
+  appartement: {
+    // SCOP ≥ 3.9 (un seul palier pour appartements)
+    H1: 21300,
+    H2: 17400,
+    H3: 11600,
+  },
+  maison_scop_39: {
+    // Maison individuelle, SCOP 3.9 à 4.3
+    H1: 77900,
+    H2: 63700,
+    H3: 42500,
+  },
+  maison_scop_43: {
+    // Maison individuelle, SCOP ≥ 4.3
+    H1: 80200,
+    H2: 65600,
+    H3: 43700,
+  },
 }
 
 // ==========================================================
-// BAR-TH-174 — PAC air/eau individuelle (maison / appartement)
+// BAR-TH-174 — Rénovation d'ampleur d'une maison individuelle
 // ==========================================================
-// Arrêté du 7 janvier 2026 (vA80-3 effective 17/01/2026)
-// Structure identique à BAR-TH-171 mais valeurs de table mises à jour 2026
-// ⚠️ VALEURS INDICATIVES — à vérifier contre l'arrêté officiel avant production
-const BAR_TH_174_TABLE = {
-  maison: {
-    111: { H1: { '<70': 38500, '70-90': 60200, '>90': 84000 },
-           H2: { '<70': 30000, '70-90': 46900, '>90': 65500 },
-           H3: { '<70': 19500, '70-90': 30400, '>90': 42400 } },
-    126: { H1: { '<70': 48100, '70-90': 75300, '>90': 105000 },
-           H2: { '<70': 37500, '70-90': 58700, '>90': 81900 },
-           H3: { '<70': 24400, '70-90': 38100, '>90': 53000 } },
+// Source : fiche officielle BAR-TH-174 vA80-3 (17/01/2026), ecologie.gouv.fr
+// ⚠️  CE N'EST PAS une fiche PAC ! C'est une rénovation globale basée sur les sauts de classe DPE.
+// Formule : Montant = Base_kWhc(nb_sauts) × Facteur_Surface(S_hab)
+// Durée de vie conventionnelle : 30 ans
+// Pas de facteur zone climatique
+const BAR_TH_174 = {
+  bases: {
+    2: 360200,   // 2 sauts de classe DPE
+    3: 447900,   // 3 sauts de classe DPE
+    4: 568600,   // 4 sauts ou plus
   },
-  appartement: {
-    111: { H1: { '<35': 17600, '35-60': 27600, '>60': 38400 },
-           H2: { '<35': 13700, '35-60': 21500, '>60': 30000 },
-           H3: { '<35': 8900, '35-60': 13900, '>60': 19400 } },
-    126: { H1: { '<35': 22000, '35-60': 34500, '>60': 48000 },
-           H2: { '<35': 17200, '35-60': 27000, '>60': 37500 },
-           H3: { '<35': 11100, '35-60': 17500, '>60': 24300 } },
-  },
+  surfaceFactors: [
+    { max: 35,  factor: 0.4 },   // S_hab < 35 m²
+    { max: 60,  factor: 0.5 },   // 35 ≤ S_hab < 60
+    { max: 90,  factor: 0.8 },   // 60 ≤ S_hab < 90
+    { max: 110, factor: 1 },     // 90 ≤ S_hab < 110
+    { max: 131, factor: 1.2 },   // 110 ≤ S_hab ≤ 130
+    { max: Infinity, factor: 1.3 }, // S_hab > 130
+  ],
+}
+
+function getSurfaceFactor174(surface) {
+  for (const b of BAR_TH_174.surfaceFactors) {
+    if (surface < b.max) return b.factor
+  }
+  return 1.3
+}
+
+// ==========================================================
+// BAR-TH-143 — Système solaire combiné (chauffage + ECS)
+// ==========================================================
+// Source : fiche officielle (opera-energie.com, vérifiée)
+// Montants FIXES par zone climatique — PAS une formule dynamique
+const BAR_TH_143_TABLE = {
+  H1: 134800,
+  H2: 121000,
+  H3: 100500,
 }
 
 // ==========================================================
 // BAR-TH-179 — PAC collective (logement collectif / copropriété)
 // ==========================================================
-// Installation d'une PAC collective sur boucle d'eau chaude en copropriété
-// ⚠️ VALEURS INDICATIVES — à vérifier contre l'arrêté officiel
+// Source : fiche officielle BAR-TH-179 vA75-1 (01/01/2026)
+// ⚠️  Valeurs indicatives — la fiche officielle a une structure complexe
+//     dépendant du nombre de logements, ETAS et type de couverture.
+//     Les coefficients ci-dessous sont une approximation par m² de surface chauffée.
 const BAR_TH_179_COEFS = {
   H1: 1950,
   H2: 1520,
@@ -151,7 +199,7 @@ export const FICHES = {
     code: 'BAR-TH-171',
     label: 'PAC air/eau — Résidentiel',
     secteur: 'residentiel',
-    description: "Installation d'une pompe à chaleur air/eau dans un bâtiment résidentiel existant (> 2 ans).",
+    description: "Installation d'une pompe à chaleur air/eau dans un bâtiment résidentiel existant (> 2 ans). Formule : Base × Facteur_Surface × Facteur_Zone. Paliers ETAS : 111% et 140%.",
     fields: [
       { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
         options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
@@ -161,7 +209,7 @@ export const FICHES = {
       { key: 'zone_climatique', label: 'Zone climatique', type: 'select',
         options: ZONES_CLIMATIQUES, required: true },
       { key: 'surface_chauffee_m2', label: 'Surface chauffée (m²)', type: 'number', required: true, min: 1 },
-      { key: 'etas_percent', label: "ETAS (%) — efficacité saisonnière", type: 'number', required: true, min: 111, step: 0.1 },
+      { key: 'etas_percent', label: "ETAS (%) — efficacité saisonnière ≥ 111%", type: 'number', required: true, min: 111, step: 0.1 },
       { key: 'marque', label: 'Marque PAC', type: 'text', required: true },
       { key: 'reference', label: 'Référence PAC', type: 'text', required: true },
       { key: 'puissance_kw', label: 'Puissance thermique nominale (kW)', type: 'number', required: true, step: 0.1 },
@@ -175,17 +223,25 @@ export const FICHES = {
       const zone = d.zone_climatique
       const etas = Number(d.etas_percent) || 0
       const surface = Number(d.surface_chauffee_m2) || 0
-      if (!type || !zone || !etas || !surface) return null
-      const palier = etas >= 126 ? 126 : 111
-      let tranche
-      if (type === 'maison') {
-        tranche = surface < 70 ? '<70' : surface <= 90 ? '70-90' : '>90'
-      } else {
-        tranche = surface < 35 ? '<35' : surface <= 60 ? '35-60' : '>60'
-      }
-      const cumac = BAR_TH_171_TABLE[type]?.[palier]?.[zone]?.[tranche] || 0
+      if (!type || !zone || etas < 111 || !surface) return null
+
+      // Palier ETAS : 111-140% (basse) ou ≥140% (haute)
+      const palier = etas >= 140 ? 140 : 111
+      const base = BAR_TH_171.bases[type]?.[palier] || 0
+      const surfFactor = getSurfaceFactor171(type, surface)
+      const zoneFactor = BAR_TH_171.zoneFactors[zone] || 1
+      const cumac = base * surfFactor * zoneFactor
+
       const coef = getCoefPrecarite(d.categorie_menage)
-      return { kwh_cumac: Math.round(cumac * coef), palier_etas: palier, tranche_surface: tranche, coef_precarite: coef, categorie_menage: d.categorie_menage }
+      return {
+        kwh_cumac: Math.round(cumac * coef),
+        base_kwhc: base,
+        facteur_surface: surfFactor,
+        facteur_zone: zoneFactor,
+        palier_etas: palier,
+        coef_precarite: coef,
+        categorie_menage: d.categorie_menage,
+      }
     },
   },
 
@@ -193,25 +249,43 @@ export const FICHES = {
     code: 'BAR-TH-129',
     label: 'PAC air/air — Résidentiel',
     secteur: 'residentiel',
-    description: "Installation d'une pompe à chaleur air/air (climatisation réversible) en résidentiel existant.",
+    description: "Installation d'une pompe à chaleur air/air en résidentiel existant. Montants fixes par type de logement et zone climatique. SCOP minimum 3,9. Puissance max 12 kW.",
     fields: [
       { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
         options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
+      { key: 'type_logement', label: 'Type de logement', type: 'select',
+        options: [{ value: 'maison', label: 'Maison individuelle' }, { value: 'appartement', label: 'Appartement' }],
+        required: true },
       { key: 'zone_climatique', label: 'Zone climatique', type: 'select', options: ZONES_CLIMATIQUES, required: true },
-      { key: 'surface_chauffee_m2', label: 'Surface chauffée (m²)', type: 'number', required: true, min: 1 },
+      { key: 'scop', label: 'SCOP ≥ 3,9', type: 'number', required: true, step: 0.01, min: 3.9 },
       { key: 'marque', label: 'Marque', type: 'text', required: true },
       { key: 'reference', label: 'Référence', type: 'text', required: true },
-      { key: 'puissance_kw', label: 'Puissance (kW)', type: 'number', required: true, step: 0.1 },
+      { key: 'puissance_kw', label: 'Puissance nominale (kW) ≤ 12', type: 'number', required: true, step: 0.1, max: 12 },
       { key: 'seer', label: 'SEER', type: 'number', step: 0.01 },
-      { key: 'scop', label: 'SCOP', type: 'number', required: true, step: 0.01, min: 3.9 },
     ],
     compute: (d) => {
+      const type = d.type_logement
       const zone = d.zone_climatique
-      const surface = Number(d.surface_chauffee_m2) || 0
-      if (!zone || !surface) return null
-      const coef = COEF_PAC_AIR_AIR[zone]
+      const scop = Number(d.scop) || 0
+      if (!type || !zone || scop < 3.9) return null
+
+      let cumac = 0
+      if (type === 'appartement') {
+        cumac = BAR_TH_129_TABLE.appartement[zone] || 0
+      } else {
+        // Maison : palier SCOP
+        const key = scop >= 4.3 ? 'maison_scop_43' : 'maison_scop_39'
+        cumac = BAR_TH_129_TABLE[key][zone] || 0
+      }
+
       const coefPrec = getCoefPrecarite(d.categorie_menage)
-      return { kwh_cumac: Math.round(coef * (surface / 100) * coefPrec), coef_zone: coef, coef_precarite: coefPrec, categorie_menage: d.categorie_menage }
+      return {
+        kwh_cumac: Math.round(cumac * coefPrec),
+        montant_base: cumac,
+        palier_scop: type === 'maison' ? (scop >= 4.3 ? '≥4.3' : '3.9-4.3') : '≥3.9',
+        coef_precarite: coefPrec,
+        categorie_menage: d.categorie_menage,
+      }
     },
   },
 
@@ -219,7 +293,7 @@ export const FICHES = {
     code: 'BAR-EN-101',
     label: 'Isolation combles / toitures',
     secteur: 'residentiel',
-    description: "Isolation de combles perdus ou rampants de toiture dans un bâtiment résidentiel.",
+    description: "Isolation de combles perdus ou rampants de toiture dans un bâtiment résidentiel. R ≥ 7 m².K/W.",
     fields: [
       { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
         options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
@@ -234,9 +308,15 @@ export const FICHES = {
       const zone = d.zone_climatique
       const s = Number(d.surface_isolee_m2) || 0
       if (!zone || !s) return null
-      const coefs = { H1: 1600, H2: 1300, H3: 900 } // kWh cumac / m² (maison indiv., indicatif)
+      // Coefficients officiels kWh cumac / m² (maison individuelle)
+      const coefs = { H1: 1700, H2: 1400, H3: 900 }
       const coefPrec = getCoefPrecarite(d.categorie_menage)
-      return { kwh_cumac: Math.round((coefs[zone] || 0) * s * coefPrec), coef_precarite: coefPrec, categorie_menage: d.categorie_menage }
+      return {
+        kwh_cumac: Math.round((coefs[zone] || 0) * s * coefPrec),
+        coef_zone: coefs[zone],
+        coef_precarite: coefPrec,
+        categorie_menage: d.categorie_menage,
+      }
     },
   },
 
@@ -244,7 +324,7 @@ export const FICHES = {
     code: 'BAR-TH-143',
     label: 'Système solaire combiné',
     secteur: 'residentiel',
-    description: "Installation d'un système solaire combiné (chauffage + eau chaude sanitaire).",
+    description: "Installation d'un système solaire combiné (chauffage + eau chaude sanitaire) en résidentiel existant. Montants fixes par zone climatique.",
     fields: [
       { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
         options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
@@ -256,70 +336,81 @@ export const FICHES = {
       { key: 'certification', label: 'Certification (Solar Keymark, CSTBat...)', type: 'text', required: true },
     ],
     compute: (d) => {
-      const s = Number(d.surface_capteurs_m2) || 0
-      const p = Number(d.productivite_kwh_m2_an) || 0
-      if (!s || !p) return null
-      // Approximation : cumac ≈ productivité × surface × durée_vie (20 ans)
+      const zone = d.zone_climatique
+      if (!zone) return null
+      // Montants fixes par zone — source fiche officielle BAR-TH-143
+      const cumac = BAR_TH_143_TABLE[zone] || 0
       const coefPrec = getCoefPrecarite(d.categorie_menage)
-      return { kwh_cumac: Math.round(s * p * 20 * coefPrec), coef_precarite: coefPrec, categorie_menage: d.categorie_menage }
+      return {
+        kwh_cumac: Math.round(cumac * coefPrec),
+        montant_base: cumac,
+        coef_precarite: coefPrec,
+        categorie_menage: d.categorie_menage,
+      }
     },
   },
 
   'BAR-TH-174': {
     code: 'BAR-TH-174',
-    label: 'PAC air/eau individuelle — Maison / Appartement',
+    label: 'Rénovation d\'ampleur — Maison individuelle',
     secteur: 'residentiel',
-    description: "Installation d'une pompe à chaleur air/eau individuelle en résidentiel existant (> 2 ans). Fiche mise à jour par arrêté du 7 janvier 2026 — résidences secondaires exclues.",
+    description: "Rénovation thermique d'ampleur d'une maison individuelle existante (France métropolitaine). Basée sur le nombre de sauts de classe DPE. Audit énergétique obligatoire. Au moins 2 postes d'enveloppe requis. Durée de vie : 30 ans. Fiche vA80-3 du 17/01/2026.",
     fields: [
-      { key: 'categorie_menage', label: 'Catégorie de ménage', type: 'select',
-        options: CATEGORIES_MENAGE.map(c => ({ value: c.value, label: c.label })), required: true },
-      { key: 'type_logement', label: 'Type de logement', type: 'select',
-        options: [{ value: 'maison', label: 'Maison individuelle' }, { value: 'appartement', label: 'Appartement' }],
-        required: true },
-      { key: 'zone_climatique', label: 'Zone climatique', type: 'select',
-        options: ZONES_CLIMATIQUES, required: true },
-      { key: 'surface_chauffee_m2', label: 'Surface chauffée (m²)', type: 'number', required: true, min: 1 },
-      { key: 'etas_percent', label: "ETAS (%) — efficacité saisonnière", type: 'number', required: true, min: 111, step: 0.1 },
-      { key: 'energie_remplacee', label: 'Énergie remplacée', type: 'select',
+      { key: 'nb_sauts_classe', label: 'Nombre de sauts de classe DPE', type: 'select',
         options: [
-          { value: 'fioul', label: 'Fioul' },
-          { value: 'gaz', label: 'Gaz' },
-          { value: 'charbon', label: 'Charbon' },
-          { value: 'electricite', label: 'Électricité (coef 1,9 depuis arrêté 7 jan 2026)' },
+          { value: '2', label: '2 sauts de classe' },
+          { value: '3', label: '3 sauts de classe' },
+          { value: '4', label: '4 sauts ou plus' },
         ], required: true },
-      { key: 'marque', label: 'Marque PAC', type: 'text', required: true },
-      { key: 'reference', label: 'Référence PAC', type: 'text', required: true },
-      { key: 'puissance_kw', label: 'Puissance thermique nominale (kW)', type: 'number', required: true, step: 0.1 },
-      { key: 'cop', label: 'COP', type: 'number', required: true, step: 0.01 },
-      { key: 'fluide_frigorigene', label: 'Fluide frigorigène', type: 'text', required: true, placeholder: 'ex: R32' },
-      { key: 'residence_principale', label: 'Résidence principale (obligatoire — RS exclues)', type: 'checkbox' },
-      { key: 'batiment_plus_2_ans', label: 'Bâtiment achevé depuis plus de 2 ans', type: 'checkbox' },
-      { key: 'installateur_rge_qualipac', label: 'Installateur RGE QualiPAC', type: 'checkbox' },
+      { key: 'classe_avant', label: 'Classe DPE avant travaux', type: 'select',
+        options: [
+          { value: 'G', label: 'G' },
+          { value: 'F', label: 'F' },
+          { value: 'E', label: 'E' },
+          { value: 'D', label: 'D' },
+        ], required: true },
+      { key: 'classe_apres', label: 'Classe DPE après travaux', type: 'select',
+        options: [
+          { value: 'A', label: 'A' },
+          { value: 'B', label: 'B' },
+          { value: 'C', label: 'C' },
+          { value: 'D', label: 'D' },
+          { value: 'E', label: 'E' },
+        ], required: true },
+      { key: 'surface_habitable_m2', label: 'Surface habitable (m²)', type: 'number', required: true, min: 1 },
+      { key: 'audit_energetique', label: 'Audit énergétique réalisé', type: 'checkbox' },
+      { key: 'nb_postes_enveloppe', label: "Nombre de postes d'enveloppe traités (min 2 sur 4)", type: 'select',
+        options: [
+          { value: '2', label: '2 postes' },
+          { value: '3', label: '3 postes' },
+          { value: '4', label: '4 postes' },
+        ], required: true },
+      { key: 'postes_enveloppe', label: 'Postes traités', type: 'text', required: true,
+        placeholder: 'ex: murs + combles + fenêtres' },
+      { key: 'cep_initial', label: 'Cep initial (kWh/m².an)', type: 'number', step: 0.1 },
+      { key: 'cep_projet', label: 'Cep projet (kWh/m².an)', type: 'number', step: 0.1 },
     ],
     compute: (d) => {
-      const type = d.type_logement
-      const zone = d.zone_climatique
-      const etas = Number(d.etas_percent) || 0
-      const surface = Number(d.surface_chauffee_m2) || 0
-      if (!type || !zone || !etas || !surface) return null
-      const palier = etas >= 126 ? 126 : 111
-      let tranche
-      if (type === 'maison') {
-        tranche = surface < 70 ? '<70' : surface <= 90 ? '70-90' : '>90'
-      } else {
-        tranche = surface < 35 ? '<35' : surface <= 60 ? '35-60' : '>60'
-      }
-      let cumac = BAR_TH_174_TABLE[type]?.[palier]?.[zone]?.[tranche] || 0
-      // Coef électricité 1,9 (arrêté 7 jan 2026, ex-2,3)
-      if (d.energie_remplacee === 'electricite') cumac = Math.round(cumac * 1.9 / 2.3)
-      const coef = getCoefPrecarite(d.categorie_menage)
+      const sauts = Number(d.nb_sauts_classe) || 0
+      const surface = Number(d.surface_habitable_m2) || 0
+      if (sauts < 2 || !surface) return null
+
+      // Montant unitaire par nombre de sauts
+      const sautKey = sauts >= 4 ? 4 : sauts
+      const base = BAR_TH_174.bases[sautKey] || 0
+
+      // Facteur correctif surface habitable
+      const surfFactor = getSurfaceFactor174(surface)
+
+      const cumac = base * surfFactor
       return {
-        kwh_cumac: Math.round(cumac * coef),
-        palier_etas: palier,
-        tranche_surface: tranche,
-        coef_precarite: coef,
-        categorie_menage: d.categorie_menage,
-        energie_remplacee: d.energie_remplacee,
+        kwh_cumac: Math.round(cumac),
+        base_kwhc: base,
+        facteur_surface: surfFactor,
+        nb_sauts: sauts,
+        classe_avant: d.classe_avant,
+        classe_apres: d.classe_apres,
+        duree_vie_ans: 30,
       }
     },
   },
@@ -328,7 +419,7 @@ export const FICHES = {
     code: 'BAR-TH-179',
     label: 'PAC collective — Copropriété / logement collectif',
     secteur: 'collectif',
-    description: "Installation d'une pompe à chaleur collective sur boucle d'eau chaude en copropriété ou logement collectif existant.",
+    description: "Installation d'une pompe à chaleur collective sur boucle d'eau chaude en copropriété ou logement collectif existant. ⚠️ Coefficients approximatifs — consulter la fiche officielle pour les cas complexes.",
     fields: [
       { key: 'zone_climatique', label: 'Zone climatique', type: 'select', options: ZONES_CLIMATIQUES, required: true },
       { key: 'nb_logements', label: 'Nombre de logements desservis', type: 'number', required: true, min: 2 },
@@ -370,25 +461,8 @@ export const FICHES = {
     },
   },
 
-  'BAR-EQ-117': {
-    code: 'BAR-EQ-117',
-    label: 'Borne de recharge IRVE résidentielle',
-    secteur: 'residentiel',
-    description: "Installation d'une borne de recharge pour véhicule électrique en résidentiel.",
-    fields: [
-      { key: 'nb_bornes', label: 'Nombre de bornes', type: 'number', required: true, min: 1 },
-      { key: 'puissance_kw', label: 'Puissance par borne (kW)', type: 'number', required: true, step: 0.1 },
-      { key: 'marque', label: 'Marque', type: 'text', required: true },
-      { key: 'reference', label: 'Référence', type: 'text', required: true },
-      { key: 'installateur_irve', label: 'Installateur qualifié IRVE', type: 'checkbox' },
-      { key: 'pilotage_energetique', label: 'Pilotage énergétique', type: 'checkbox' },
-    ],
-    compute: (d) => {
-      // Forfait indicatif par borne
-      const nb = Number(d.nb_bornes) || 0
-      return { kwh_cumac: nb * 7400 }
-    },
-  },
+  // ⚠️ BAR-EQ-117 SUPPRIMÉ — cette fiche n'existe PAS dans le dispositif CEE.
+  // Il n'y a pas de fiche CEE résidentielle pour les bornes IRVE.
 }
 
 // ==========================================================
@@ -493,58 +567,58 @@ export function checkConformity(fiche_code, data) {
 
   if (fiche_code === 'BAT-EQ-127') {
     if (d.flux_lumineux_lm && Number(d.flux_lumineux_lm) < 3000)
-      issues.push({ level: 'error', field: 'flux_lumineux_lm', message: 'Flux lumineux < 3000 lm (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'flux_lumineux_lm', message: 'Flux lumineux < 3000 lm (non éligible)' })
     if (d.efficacite_lm_w && Number(d.efficacite_lm_w) < 90)
-      issues.push({ level: 'error', field: 'efficacite_lm_w', message: 'Efficacit\u00e9 < 90 lm/W (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'efficacite_lm_w', message: 'Efficacité < 90 lm/W (non éligible)' })
     if (d.duree_vie_h && Number(d.duree_vie_h) < 35000)
-      issues.push({ level: 'error', field: 'duree_vie_h', message: 'Dur\u00e9e de vie < 35 000 h (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'duree_vie_h', message: 'Durée de vie < 35 000 h (non éligible)' })
     if (d.facteur_puissance && Number(d.facteur_puissance) <= 0.9)
-      issues.push({ level: 'error', field: 'facteur_puissance', message: 'Facteur de puissance \u2264 0,9 (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'facteur_puissance', message: 'Facteur de puissance ≤ 0,9 (non éligible)' })
     if (d.thd_percent && Number(d.thd_percent) >= 25)
-      issues.push({ level: 'error', field: 'thd_percent', message: 'THD \u2265 25% (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'thd_percent', message: 'THD ≥ 25% (non éligible)' })
     if (d.groupe_risque && d.groupe_risque !== '0' && d.groupe_risque !== '1')
-      issues.push({ level: 'warning', field: 'groupe_risque', message: 'Groupe de risque photobiologique doit \u00eatre 0 ou 1' })
+      issues.push({ level: 'warning', field: 'groupe_risque', message: 'Groupe de risque photobiologique doit être 0 ou 1' })
   }
 
   if (fiche_code === 'BAR-TH-171') {
     if (d.etas_percent && Number(d.etas_percent) < 111)
-      issues.push({ level: 'error', field: 'etas_percent', message: 'ETAS < 111% (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'etas_percent', message: 'ETAS < 111% (non éligible)' })
     if (d.residence_principale === false)
-      issues.push({ level: 'warning', field: 'residence_principale', message: 'Non r\u00e9sidence principale : v\u00e9rifier \u00e9ligibilit\u00e9' })
+      issues.push({ level: 'warning', field: 'residence_principale', message: 'Non résidence principale : vérifier éligibilité' })
     if (d.batiment_plus_2_ans === false)
-      issues.push({ level: 'error', field: 'batiment_plus_2_ans', message: 'B\u00e2timent < 2 ans (non \u00e9ligible \u00e0 BAR-TH-171)' })
+      issues.push({ level: 'error', field: 'batiment_plus_2_ans', message: 'Bâtiment < 2 ans (non éligible à BAR-TH-171)' })
   }
 
   if (fiche_code === 'BAR-TH-129') {
     if (d.scop && Number(d.scop) < 3.9)
-      issues.push({ level: 'error', field: 'scop', message: 'SCOP < 3,9 (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'scop', message: 'SCOP < 3,9 (non éligible)' })
+    if (d.puissance_kw && Number(d.puissance_kw) > 12)
+      issues.push({ level: 'error', field: 'puissance_kw', message: 'Puissance > 12 kW (non éligible BAR-TH-129)' })
   }
 
   if (fiche_code === 'BAR-TH-174') {
-    if (d.etas_percent && Number(d.etas_percent) < 111)
-      issues.push({ level: 'error', field: 'etas_percent', message: 'ETAS < 111% (non \u00e9ligible)' })
-    if (d.residence_principale === false)
-      issues.push({ level: 'error', field: 'residence_principale', message: 'R\u00e9sidences secondaires exclues depuis arr\u00eat\u00e9 7 jan 2026' })
-    if (d.batiment_plus_2_ans === false)
-      issues.push({ level: 'error', field: 'batiment_plus_2_ans', message: 'B\u00e2timent < 2 ans (non \u00e9ligible)' })
-    if (d.installateur_rge_qualipac === false)
-      issues.push({ level: 'warning', field: 'installateur_rge_qualipac', message: 'Installateur RGE QualiPAC requis pour PAC air/eau' })
+    if (d.nb_sauts_classe && Number(d.nb_sauts_classe) < 2)
+      issues.push({ level: 'error', field: 'nb_sauts_classe', message: 'Minimum 2 sauts de classe DPE requis' })
+    if (d.audit_energetique === false)
+      issues.push({ level: 'error', field: 'audit_energetique', message: 'Audit énergétique obligatoire pour BAR-TH-174' })
+    if (d.nb_postes_enveloppe && Number(d.nb_postes_enveloppe) < 2)
+      issues.push({ level: 'error', field: 'nb_postes_enveloppe', message: "Au moins 2 postes d'enveloppe requis (sur 4 : murs, planchers bas, toiture, fenêtres)" })
   }
 
   if (fiche_code === 'BAR-TH-179') {
     if (d.etas_percent && Number(d.etas_percent) < 111)
-      issues.push({ level: 'error', field: 'etas_percent', message: 'ETAS < 111% (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'etas_percent', message: 'ETAS < 111% (non éligible)' })
     if (d.av_syndic === false)
-      issues.push({ level: 'warning', field: 'av_syndic', message: 'Accord AG/syndic requis pour op\u00e9ration en copropri\u00e9t\u00e9' })
+      issues.push({ level: 'warning', field: 'av_syndic', message: 'Accord AG/syndic requis pour opération en copropriété' })
     if (d.batiment_plus_2_ans === false)
-      issues.push({ level: 'error', field: 'batiment_plus_2_ans', message: 'B\u00e2timent < 2 ans (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'batiment_plus_2_ans', message: 'Bâtiment < 2 ans (non éligible)' })
     if (d.nb_logements && Number(d.nb_logements) < 2)
-      issues.push({ level: 'error', field: 'nb_logements', message: 'Au moins 2 logements requis pour op\u00e9ration collective' })
+      issues.push({ level: 'error', field: 'nb_logements', message: 'Au moins 2 logements requis pour opération collective' })
   }
 
   if (fiche_code === 'BAR-EN-101') {
     if (d.resistance_thermique && Number(d.resistance_thermique) < 7)
-      issues.push({ level: 'error', field: 'resistance_thermique', message: 'R < 7 m\u00b2.K/W (non \u00e9ligible)' })
+      issues.push({ level: 'error', field: 'resistance_thermique', message: 'R < 7 m².K/W (non éligible)' })
   }
 
   const f = FICHES[fiche_code]
@@ -559,6 +633,14 @@ export function checkConformity(fiche_code, data) {
   return issues
 }
 
+// ==========================================================
+// Export CSV délégataire
+// ==========================================================
+// Le CSV délégataire permet d'exporter les données d'un dossier CEE
+// dans un format tabulaire (point-virgule) compatible Excel, pour
+// transmission au délégataire (TotalEnergies, Hellio, etc.) qui
+// rachète les certificats. C'est le fichier qu'on joint quand on
+// dépose le dossier chez le délégataire.
 export function exportDossierCSV(dossier) {
   const rows = []
   const esc = (v) => {
@@ -572,24 +654,24 @@ export function exportDossierCSV(dossier) {
   const d = dossier.donnees_techniques || {}
 
   add('Champ', 'Valeur')
-  add('R\u00e9f\u00e9rence dossier', dossier.reference_externe || dossier.id)
+  add('Référence dossier', dossier.reference_externe || dossier.id)
   add('Statut', dossier.statut)
-  add('D\u00e9l\u00e9gataire', dossier.delegataire || '')
-  add('R\u00e9f\u00e9rence d\u00e9l\u00e9gataire', dossier.reference_delegataire || '')
+  add('Délégataire', dossier.delegataire || '')
+  add('Référence délégataire', dossier.reference_delegataire || '')
   add('Fiche FOS', dossier.fiche_code || '')
   add('Zone climatique', dossier.zone_climatique || '')
   add('kWh cumac', dossier.kwh_cumac || '')
-  add('Prime estim\u00e9e (\u20ac)', dossier.montant_prime_estime || '')
-  add('Prime re\u00e7ue (\u20ac)', dossier.montant_prime_recu || '')
-  add('Date accord pr\u00e9alable', dossier.date_accord_prealable || '')
+  add('Prime estimée (€)', dossier.montant_prime_estime || '')
+  add('Prime reçue (€)', dossier.montant_prime_recu || '')
+  add('Date accord préalable', dossier.date_accord_prealable || '')
   add('Date facture', dossier.date_facture || '')
-  add('Date d\u00e9p\u00f4t d\u00e9l\u00e9gataire', dossier.date_depot_delegataire || '')
+  add('Date dépôt délégataire', dossier.date_depot_delegataire || '')
   add('Date envoi', dossier.date_envoi || '')
   add('Date validation', dossier.date_validation || '')
   add('Client', c.client_name || '')
   add('Adresse', c.adresse || '')
   add('Email client', c.client_email || '')
-  add('T\u00e9l\u00e9phone client', c.client_phone || '')
+  add('Téléphone client', c.client_phone || '')
   Object.entries(d).forEach(([k, v]) => add(`tech.${k}`, v))
 
   return '\uFEFF' + rows.join('\n')
