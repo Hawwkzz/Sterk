@@ -14,6 +14,7 @@ import { formatDate, formatCurrency } from '../lib/utils'
 import { generateDossierCEEPDF, downloadPDF } from '../lib/pdf'
 import toast from 'react-hot-toast'
 import FicheOperationForm from '../components/FicheOperationForm'
+import PhotoComplianceBadge from '../components/PhotoComplianceBadge'
 import { computeExpiryStatus, estimatePrime, checkConformity, exportDossierCSV, downloadCSV } from '../lib/cee'
 
 const STATUT_FLOW = [
@@ -676,33 +677,35 @@ export default function DossierCEEDetailPage() {
                     {photosBefore.map(photo => {
                       const isImported = importedSourceIds.has(photo.id)
                       return (
-                        <div key={photo.id} className="relative group">
-                          <img
-                            src={photo.url}
-                            alt="Photo avant"
-                            className={`w-full aspect-square object-cover rounded-lg ${isImported ? 'opacity-50' : ''}`}
-                          />
-                          {isImported ? (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded-full font-medium">
-                                Importée
-                              </span>
+                        <div key={photo.id} className="space-y-1">
+                          <div className="relative group">
+                            <img
+                              src={photo.url}
+                              alt="Photo avant"
+                              className={`w-full aspect-square object-cover rounded-lg ${isImported ? 'opacity-50' : ''}`}
+                            />
+                            <div className="absolute top-1.5 right-1.5">
+                              <PhotoComplianceBadge photo={photo} compact />
                             </div>
-                          ) : (
-                            <button
-                              onClick={() => importEquipePhoto(photo)}
-                              disabled={importing === photo.id}
-                              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
-                            >
-                              {importing === photo.id ? (
-                                <Spinner size="sm" />
-                              ) : (
+                            {isImported ? (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded-full font-medium">
+                                  Importée
+                                </span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => importEquipePhoto(photo)}
+                                disabled={importing === photo.id}
+                                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
+                              >
                                 <span className="bg-orange-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
                                   <Download className="w-3 h-3" /> Importer
                                 </span>
-                              )}
-                            </button>
-                          )}
+                              </button>
+                            )}
+                          </div>
+                          <PhotoComplianceBadge photo={photo} />
                         </div>
                       )
                     })}
@@ -721,33 +724,35 @@ export default function DossierCEEDetailPage() {
                     {photosAfter.map(photo => {
                       const isImported = importedSourceIds.has(photo.id)
                       return (
-                        <div key={photo.id} className="relative group">
-                          <img
-                            src={photo.url}
-                            alt="Photo après"
-                            className={`w-full aspect-square object-cover rounded-lg ${isImported ? 'opacity-50' : ''}`}
-                          />
-                          {isImported ? (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded-full font-medium">
-                                Importée
-                              </span>
+                        <div key={photo.id} className="space-y-1">
+                          <div className="relative group">
+                            <img
+                              src={photo.url}
+                              alt="Photo après"
+                              className={`w-full aspect-square object-cover rounded-lg ${isImported ? 'opacity-50' : ''}`}
+                            />
+                            <div className="absolute top-1.5 right-1.5">
+                              <PhotoComplianceBadge photo={photo} compact />
                             </div>
-                          ) : (
-                            <button
-                              onClick={() => importEquipePhoto(photo)}
-                              disabled={importing === photo.id}
-                              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
-                            >
-                              {importing === photo.id ? (
-                                <Spinner size="sm" />
-                              ) : (
+                            {isImported ? (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded-full font-medium">
+                                  Importée
+                                </span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => importEquipePhoto(photo)}
+                                disabled={importing === photo.id}
+                                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
+                              >
                                 <span className="bg-orange-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
                                   <Download className="w-3 h-3" /> Importer
                                 </span>
-                              )}
-                            </button>
-                          )}
+                              </button>
+                            )}
+                          </div>
+                          <PhotoComplianceBadge photo={photo} />
                         </div>
                       )
                     })}
