@@ -10,6 +10,7 @@ import { Card, Button, Spinner, Badge } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import EditChantierModal from '../components/EditChantierModal'
 import MediaViewer from '../components/MediaViewer'
+import PhotoComplianceBadge from '../components/PhotoComplianceBadge'
 import toast from 'react-hot-toast'
 
 const STATUS_ICONS = {
@@ -78,7 +79,8 @@ export default function ChantierDetailPage() {
   const canEdit = chantier && (
     chantier.status === STATUTS.DRAFT ||
     chantier.status === STATUTS.PENDING_CLIENT ||
-    chantier.status === STATUTS.REFUSE
+    chantier.status === STATUTS.REFUSE ||
+    chantier.status === STATUTS.VALIDE
   )
 
   if (loading) {
@@ -221,15 +223,20 @@ export default function ChantierDetailPage() {
       {chantier.photos && chantier.photos.filter(p => p.photo_type === 'before').length > 0 && (
         <Card className="p-5">
           <h2 className="text-lg font-semibold text-white mb-4">📷 Photos AVANT</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {chantier.photos.filter(p => p.photo_type === 'before').map((photo) => (
-              <button
-                key={photo.id}
-                onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo avant' })}
-                className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
-              >
-                <img src={photo.url} alt="Photo avant" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
-              </button>
+              <div key={photo.id} className="space-y-1.5">
+                <button
+                  onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo avant' })}
+                  className="relative aspect-square w-full rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
+                >
+                  <img src={photo.url} alt="Photo avant" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+                  <div className="absolute top-1.5 right-1.5">
+                    <PhotoComplianceBadge photo={photo} compact />
+                  </div>
+                </button>
+                <PhotoComplianceBadge photo={photo} />
+              </div>
             ))}
           </div>
         </Card>
@@ -239,15 +246,20 @@ export default function ChantierDetailPage() {
       {chantier.photos && chantier.photos.filter(p => p.photo_type === 'after' || !p.photo_type).length > 0 && (
         <Card className="p-5">
           <h2 className="text-lg font-semibold text-white mb-4">📷 Photos APRÈS</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {chantier.photos.filter(p => p.photo_type === 'after' || !p.photo_type).map((photo) => (
-              <button
-                key={photo.id}
-                onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo après' })}
-                className="aspect-square rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
-              >
-                <img src={photo.url} alt="Photo après" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
-              </button>
+              <div key={photo.id} className="space-y-1.5">
+                <button
+                  onClick={() => setViewerMedia({ url: photo.url, alt: 'Photo après' })}
+                  className="relative aspect-square w-full rounded-lg overflow-hidden bg-zinc-800 cursor-pointer"
+                >
+                  <img src={photo.url} alt="Photo après" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+                  <div className="absolute top-1.5 right-1.5">
+                    <PhotoComplianceBadge photo={photo} compact />
+                  </div>
+                </button>
+                <PhotoComplianceBadge photo={photo} />
+              </div>
             ))}
           </div>
         </Card>
@@ -316,6 +328,12 @@ export default function ChantierDetailPage() {
           <Button className="w-full" size="lg" onClick={() => setEditModalOpen(true)}>
             <Edit className="w-5 h-5" />
             Corriger et renvoyer
+          </Button>
+        )}
+        {chantier.status === STATUTS.VALIDE && (
+          <Button className="w-full" size="lg" variant="secondary" onClick={() => setEditModalOpen(true)}>
+            <Edit className="w-5 h-5" />
+            Compléter les informations
           </Button>
         )}
         <Button variant="outline" className="w-full" onClick={handleDownloadPDF}>
