@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
+import JSZip from 'jszip'
 import { formatDate, formatDateTime } from './utils'
 
 /**
@@ -704,4 +705,111 @@ export function generateAttestationHonneurPDF(dossier, entreprise) {
   doc.line(pageWidth / 2 + 5, y, pageWidth / 2 + 75, y)
 
   return doc
+}
+
+// =============================================
+// EXPORT DOSSIER CEE COMPLET EN ZIP
+// =============================================
+
+async function fetchFileAsBlob(url) {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const blob = await response.blob()
+    const urlPath = new URL(url).pathname
+    const filename = decodeURIComponent(urlPath.split('/').pop()) || 'document'
+    return { blob, filename }
+  } catch (err) {
+    console.warn('Impossible de télécharger:', url, err)
+    return null
+  }
+}
+
+/**
+ * Génère un ZIP contenant toutes les pièces du dossier CEE :
+ * - Attestation sur l'honneur (PDF auto-généré)
+ * - Tous les documents uploadés (devis, facture, fiche technique, etc.)
+ * - Toutes les photos (avant/après)
+ * - Justificatif RGE si disponible dans les données entreprise
+ */
+export async function exportDossierCEEZip(dossier, entreprise) {
+  const zip = new JSZip()
+  const documents = dossier.documents || []
+
+  // 1. Attestation sur l'honneur (générée automatiquement)
+  try {
+    const attestationPDF = generateAttestationHonneurPDF(dossier, entreprise)
+    const attestationBlob = attestationPDF.output('blob')
+    zip.file('01_Attestation_Honneur.pdf', attestationBlob)
+  } catch (err) {
+    console.warn('Erreur génération attestation:', err)
+  }
+
+  // 2. Documents uploadés, classés par type
+  const typeLabels = {
+    DEVIS: '02_Devis',
+    FACTURE: '03_Facture',
+    CADRE_CONTRIBUTION: '04_Cadre_Contribution',
+    FICHE_TECHNIQUE: '05_Fiche_Technique',
+    AVIS_TECHNIQUE: '06_Avis_Technique',
+    ATTESTATION_HONNEUR: '07_Attestation_Uploadee',
+    AUTRE: '08_Autre',
+  }
+
+  const photoFolder = zip.folder('Photos')
+  let photoAvantCount = 0
+  let photoApresCount = 0
+  const usedFilenames = new Set()
+
+  for (const doc of documents) {
+    if (!doc.url) continue
+
+    const result = await fetchFileAsBlob(doc.url)
+    if (!result) continue
+
+    const ext = result.filename.includes('.') ? '.' + result.filename.split('.').pop() : ''
+
+    if (doc.type_document === 'PHOTO_AVANT') {
+      photoAvantCount++
+      photoFolder.file(`avant_${photoAvantCount}${ext || '.jpg'}`, result.blob)
+    } else if (doc.type_document === 'PHOTO_APRES') {
+      photoApresCount++
+      photoFolder.file(`apres_${photoApresCount}${ext || '.jpg'}`, result.blob)
+    } else {
+      const prefix = typeLabels[doc.type_document] || '09_Document'
+      let filename = `${prefix}${ext}`
+      if (usedFilenames.has(filename)) {
+        const docName = (doc.nom || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40)
+        filename = `${prefix}_${docName}${ext}`
+      }
+      usedFilenames.add(filename)
+      zip.file(filename, result.blob)
+    }
+  }
+
+  // 3. Justificatif RGE de l'entreprise (si uploadé)
+  if (entreprise?.rge_certificate_url) {
+    const rgeResult = await fetchFileAsBlob(entreprise.rge_certificate_url)
+    if (rgeResult) {
+      const ext = rgeResult.filename.includes('.') ? '.' + rgeResult.filename.split('.').pop() : '.pdf'
+      zip.file(`10_Justificatif_RGE${ext}`, rgeResult.blob)
+    }
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
+  return zipBlob
+}
+
+/**
+ * Télécharge un blob en tant que fichier
+ */
+export function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }

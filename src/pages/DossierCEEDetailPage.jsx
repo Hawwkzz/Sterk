@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabase'
 import { Card, Badge, Button, Spinner, Modal, Input, Textarea } from '../components/ui'
 import { CEE_STATUT_CONFIG, CEE_STATUTS, CEE_DOCUMENT_TYPES, DELEGATAIRES } from '../lib/constants'
 import { formatDate, formatCurrency } from '../lib/utils'
-import { generateDossierCEEPDF, downloadPDF } from '../lib/pdf'
+import { generateDossierCEEPDF, downloadPDF, exportDossierCEEZip, downloadBlob } from '../lib/pdf'
 import toast from 'react-hot-toast'
 import FicheOperationForm from '../components/FicheOperationForm'
 import PhotoComplianceBadge from '../components/PhotoComplianceBadge'
@@ -370,17 +370,18 @@ export default function DossierCEEDetailPage() {
     setShowEditModal(true)
   }
 
-  // Télécharger le dossier CEE complet en PDF
-  async function handleDownloadPDF() {
+  // Télécharger le dossier CEE complet en ZIP
+  async function handleDownloadZip() {
     setDownloadingPDF(true)
     try {
-      toast.loading('Génération du rapport CEE...', { id: 'cee-pdf' })
-      const doc = await generateDossierCEEPDF(dossier, entreprise)
-      downloadPDF(doc, `dossier-cee-${chantier?.client_name || dossier.id.slice(0, 8)}.pdf`)
-      toast.success('Rapport CEE téléchargé', { id: 'cee-pdf' })
+      toast.loading('Préparation du dossier complet...', { id: 'cee-zip' })
+      const zipBlob = await exportDossierCEEZip(dossier, entreprise)
+      const clientSlug = (chantier?.client_name || dossier.id.slice(0, 8)).replace(/[^a-zA-Z0-9_-]/g, '_')
+      downloadBlob(zipBlob, `Dossier_CEE_${clientSlug}.zip`)
+      toast.success('Dossier CEE téléchargé', { id: 'cee-zip' })
     } catch (err) {
-      console.error('PDF error:', err)
-      toast.error('Erreur lors de la génération du PDF', { id: 'cee-pdf' })
+      console.error('ZIP error:', err)
+      toast.error('Erreur lors de la génération du dossier', { id: 'cee-zip' })
     } finally {
       setDownloadingPDF(false)
     }
@@ -903,20 +904,20 @@ export default function DossierCEEDetailPage() {
         </Button>
       </Card>
 
-      {/* === TÉLÉCHARGEMENT DOSSIER COMPLET === */}
+      {/* === TÉLÉCHARGEMENT DOSSIER COMPLET (ZIP) === */}
       <Card className="p-4">
         <Button
           className="w-full"
           variant="secondary"
-          onClick={handleDownloadPDF}
+          onClick={handleDownloadZip}
           loading={downloadingPDF}
         >
           <Download className="w-4 h-4" />
-          Télécharger le rapport CEE complet (PDF)
+          Télécharger le dossier CEE complet (ZIP)
         </Button>
         {totalDocs > 0 && documents.some(d => d.url) && (
           <p className="text-zinc-600 text-[10px] text-center mt-2">
-            Inclut les infos chantier + {documents.filter(d => d.url).length} pièce(s) jointe(s)
+            Inclut attestation + {documents.filter(d => d.url).length} pièce(s) jointe(s) + justificatif RGE
           </p>
         )}
       </Card>
